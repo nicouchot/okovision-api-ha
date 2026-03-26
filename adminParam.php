@@ -261,6 +261,25 @@
                 <div  align="center">
 					    <button id="bt_save_infoge" name="bt_save_infoge" class="btn btn-primary" type="button"><?php echo session::getInstance()->getLabel('lang.text.page.admin.save'); ?></button>
 				</div>
+
+            <hr>
+
+            <div class="page-header">
+                <h4>Recalcul de l'historique</h4>
+            </div>
+            <p class="text-muted" style="text-align:center;">
+                Recalcule l'ensemble des données dérivées sur tout l'historique stocké&nbsp;:
+                consommation kWh, cumulatifs (kg / kWh / cycles), prix au kg et au kWh.<br>
+                <strong>À relancer après chaque modification du PCI pellet ou du rendement chaudière.</strong>
+            </p>
+            <div align="center">
+                <button id="bt_recalc_histo" class="btn btn-warning" type="button">
+                    <span class="glyphicon glyphicon-refresh" id="bt_recalc_icon"></span>
+                    &nbsp;Recalculer l'historique
+                </button>
+            </div>
+            <div id="recalc_result" style="display:none; margin-top:14px;" class="alert alert-success text-center"></div>
+
             </div>
             
             

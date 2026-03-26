@@ -155,6 +155,47 @@ $(document).ready(function() {
 		});
 	});
 
+	$('#bt_recalc_histo').click(function() {
+
+		var $btn  = $(this);
+		var $icon = $('#bt_recalc_icon');
+		var $res  = $('#recalc_result');
+
+		$btn.prop('disabled', true);
+		$icon.addClass('glyphicon-spin');
+		$res.hide();
+
+		$.api('POST', 'admin.recalcHistorique', {}, false).done(function(json) {
+			$btn.prop('disabled', false);
+			$icon.removeClass('glyphicon-spin');
+
+			if (json.response) {
+				$res
+					.removeClass('alert-danger').addClass('alert-success')
+					.html(
+						'<strong>Recalcul terminé en ' + json.elapsed + ' s</strong><br>' +
+						json.rows + ' lignes recalculées &mdash; ' +
+						json.lots + ' lot(s) de livraison &mdash; ' +
+						'PCI&nbsp;: ' + json.pci + '&nbsp;kWh/kg &mdash; ' +
+						'Rendement&nbsp;: ' + json.rendement + '&nbsp;%'
+					)
+					.show();
+			} else {
+				$res
+					.removeClass('alert-success').addClass('alert-danger')
+					.html('<strong>Erreur lors du recalcul.</strong>')
+					.show();
+			}
+		}).fail(function() {
+			$btn.prop('disabled', false);
+			$icon.removeClass('glyphicon-spin');
+			$res
+				.removeClass('alert-success').addClass('alert-danger')
+				.html('<strong>Erreur de communication avec le serveur.</strong>')
+				.show();
+		});
+	});
+
 	$('#bt_save_infoge').click(function() {
 
 		var tab = {

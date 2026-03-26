@@ -42,6 +42,10 @@ if (is_ajax() && is_valid()) {
                             $a->regenerateToken();
 
                             break;
+                        case 'recalcHistorique':
+                            $a->recalcHistorique();
+
+                            break;
                         case 'getFileFromChaudiere':
                             $a->getFileFromChaudiere();
 

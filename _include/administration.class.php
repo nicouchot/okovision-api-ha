@@ -92,6 +92,117 @@ class administration extends connectDb
     }
 
     /**
+     * Recalcule toutes les colonnes dérivées de oko_resume_day sur l'ensemble de l'historique.
+     * Utile après modification du PCI ou du rendement.
+     *   - conso_kwh  = conso_kg × PCI_PELLET × (RENDEMENT / 100)
+     *   - cumul_kg / cumul_kwh / cumul_cycle  (totaux cumulés depuis le 1er jour)
+     *   - prix_kg / prix_kwh  (logique FIFO sur les livraisons PELLET)
+     *
+     * @return json response, statistiques et temps d'exécution
+     */
+    public function recalcHistorique()
+    {
+        $start        = microtime(true);
+        $pci          = (float) PCI_PELLET;
+        $rendement    = (float) RENDEMENT_CHAUDIERE;
+        $energieParKg = $pci * $rendement / 100;
+
+        /* ── 1. Recalcul de conso_kwh (toutes les lignes ayant conso_kg) ──── */
+        $this->query(
+            "UPDATE oko_resume_day
+             SET conso_kwh = ROUND(conso_kg * {$pci} * ({$rendement} / 100), 2)
+             WHERE conso_kg IS NOT NULL"
+        );
+
+        /* ── 2. Recalcul des cumulatifs (lecture séquentielle) ────────────── */
+        $result = $this->query(
+            "SELECT jour, conso_kg, conso_kwh, nb_cycle
+             FROM oko_resume_day
+             ORDER BY jour ASC"
+        );
+
+        $cumulKg    = 0.0;
+        $cumulKwh   = 0.0;
+        $cumulCycle = 0;
+        $rowsCumul  = 0;
+
+        while ($r = $result->fetch_object()) {
+            $cumulKg    = round($cumulKg    + (float)($r->conso_kg    ?? 0), 2);
+            $cumulKwh   = round($cumulKwh   + (float)($r->conso_kwh   ?? 0), 2);
+            $cumulCycle = $cumulCycle + (int)($r->nb_cycle ?? 0);
+            $this->query(
+                "UPDATE oko_resume_day
+                 SET cumul_kg = {$cumulKg}, cumul_kwh = {$cumulKwh}, cumul_cycle = {$cumulCycle}
+                 WHERE jour = '{$r->jour}'"
+            );
+            $rowsCumul++;
+        }
+
+        /* ── 3. Chargement des livraisons PELLET (FIFO) ───────────────────── */
+        $lotResult = $this->query(
+            "SELECT event_date, quantity, price
+             FROM oko_silo_events
+             WHERE event_type = 'PELLET' AND quantity > 0
+             ORDER BY event_date ASC"
+        );
+
+        $lots           = [];
+        $cumulLivraison = 0;
+
+        while ($l = $lotResult->fetch_object()) {
+            $cumulLivraison += (int) $l->quantity;
+            $lots[] = [
+                'prix_kg'         => round((float) $l->price / (int) $l->quantity, 4),
+                'cumul_livraison' => $cumulLivraison,
+            ];
+        }
+
+        /* ── 4. Affectation du prix par jour ─────────────────────────────── */
+        $rowsPrix   = 0;
+        $lastPrixKg = !empty($lots) ? $lots[count($lots) - 1]['prix_kg'] : null;
+
+        if (!empty($lots)) {
+            $rows2 = $this->query(
+                "SELECT jour, cumul_kg FROM oko_resume_day
+                 WHERE cumul_kg IS NOT NULL ORDER BY jour ASC"
+            );
+
+            while ($r = $rows2->fetch_object()) {
+                $prixKg = $lastPrixKg;
+                foreach ($lots as $lot) {
+                    if ($lot['cumul_livraison'] >= (float) $r->cumul_kg) {
+                        $prixKg = $lot['prix_kg'];
+                        break;
+                    }
+                }
+                $prixKwh    = ($prixKg !== null && $energieParKg > 0)
+                    ? round($prixKg / $energieParKg, 4)
+                    : null;
+                $prixKwhSql = ($prixKwh !== null) ? $prixKwh : 'NULL';
+
+                $this->query(
+                    "UPDATE oko_resume_day
+                     SET prix_kg = {$prixKg}, prix_kwh = {$prixKwhSql}
+                     WHERE jour = '{$r->jour}'"
+                );
+                $rowsPrix++;
+            }
+        }
+
+        $elapsed = round(microtime(true) - $start, 2);
+
+        $this->sendResponse([
+            'response'   => true,
+            'rows'       => $rowsCumul,
+            'rows_prix'  => $rowsPrix,
+            'lots'       => count($lots),
+            'pci'        => $pci,
+            'rendement'  => $rendement,
+            'elapsed'    => $elapsed,
+        ]);
+    }
+
+    /**
      * Génère un nouveau token et le persiste dans config.php.
      *
      * @return json response=true, token=12 premiers caractères du nouveau token
