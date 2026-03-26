@@ -4,6 +4,10 @@ Ce dépôt contient l'ensemble des modifications apportées à [OkoVision](https
 pour l'intégration avec **Home Assistant**, le calcul de la consommation énergétique en kWh,
 et des corrections de compatibilité PHP 8.2.
 
+> **Intégration Home Assistant (HACS)**
+> L'intégration HACS compatible avec l'API exposée par ce dépôt est disponible ici :
+> **[nicouchot/okovision-ha](https://github.com/nicouchot/okovision-ha)**
+
 ---
 
 ## Sommaire
