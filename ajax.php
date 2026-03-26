@@ -38,6 +38,10 @@ if (is_ajax() && is_valid()) {
                             $a->saveInfoGenerale($_POST);
 
                             break;
+                        case 'regenerateToken':
+                            $a->regenerateToken();
+
+                            break;
                         case 'getFileFromChaudiere':
                             $a->getFileFromChaudiere();
 

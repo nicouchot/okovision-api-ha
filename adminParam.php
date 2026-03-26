@@ -1,7 +1,7 @@
 <?php
 /*
 * Projet : Okovision - Supervision chaudiere OeKofen
-* Auteur : Stawen Dronek
+* Auteurs : Stawen Dronek mod by skydarc for V2
 * Utilisation commerciale interdite sans mon accord
 */
 
@@ -30,31 +30,80 @@
     					  <div class="col-md-3">
     					    <select id="oko_typeconnect" name="oko_typeconnect" class="form-control">
     					        <option value="0">USB</option>
-    			                <option value="1" <?php if (GET_CHAUDIERE_DATA_BY_IP) {
-    echo 'selected=selected';
-} ?> >IP</option>
+    			                <option value="1" <?php if (GET_CHAUDIERE_DATA_BY_IP == 1) { echo 'selected=selected';} ?> >IP</option>
+								<option value="2" <?php if (GET_CHAUDIERE_DATA_BY_IP == 2) { echo 'selected=selected';} ?> >IP via Json (firmware v4.00b)</option>
     					    </select>
     					  </div>
-    					 
     					</div>
-    					
+						
                         <!-- Text input-->
-                        <div class="form-group" id="form-ip" <?php if (!GET_CHAUDIERE_DATA_BY_IP) {
-    echo 'style="display: none;"';
-} ?>>
+                        <div class="form-group" id="form-ip" <?php if (!GET_CHAUDIERE_DATA_BY_IP) { echo 'style="display: none;"';} ?>>
                             <label class="col-md-4 control-label" for="oko_ip"><?php echo session::getInstance()->getLabel('lang.text.page.admin.boilerip'); ?></label>  
                             <div class="col-md-3">
                                 <input id="oko_ip" name="oko_ip" type="text" class="form-control input-md" placeholder="ex : 192.168.0.20" value="<?php echo CHAUDIERE; ?>">
                                 <span class="help-block" id="url_csv"></span> 
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-3" id="div_test_oko_ip" <?php if (GET_CHAUDIERE_DATA_BY_IP == 2) { echo 'style="display: none;"';}?> >
                                 <button type="button" class="btn btn-xs btn-default" id="test_oko_ip">
+                                    <span class="glyphicon glyphicon-share" aria-hidden="true"></span><?php echo session::getInstance()->getLabel('lang.text.page.admin.test'); ?>
+                                </button>
+                            </div>
+    					</div>
+						
+						<!-- Text input-->
+                        <div class="form-group" id="form-json-port" <?php if (GET_CHAUDIERE_DATA_BY_IP == 0 || GET_CHAUDIERE_DATA_BY_IP == 1) { echo 'style="display: none;"';}?> >
+                            <label class="col-md-4 control-label" for="oko_json_port"><?php echo session::getInstance()->getLabel('lang.text.page.admin.boilerjsonport'); ?></label>  
+                            <div class="col-md-3">
+                                <input id="oko_json_port" name="oko_json_port" type="text" class="form-control input-md" placeholder="ex : 4321" value="<?php echo PORT_JSON; ?>">
+                                <span class="help-block" id="url_csv"></span> 
+                            </div>
+    					</div>
+						<div class="form-group" id="form-json-pwd" <?php if (GET_CHAUDIERE_DATA_BY_IP == 0 || GET_CHAUDIERE_DATA_BY_IP == 1) { echo 'style="display: none;"';}?> >
+                            <label class="col-md-4 control-label" for="oko_json_pwd"><?php echo session::getInstance()->getLabel('lang.text.page.admin.boilerjsonPWD'); ?></label>  
+                            <div class="col-md-3">
+                                <input id="oko_json_pwd" name="oko_json_pwd" type="text" class="form-control input-md" placeholder="ex : A1b2" value="<?php echo PASSWORD_JSON; ?>">
+                                <span class="help-block" id="url_csv"></span> 
+                            </div>
+							<div class="col-md-3">
+                                <button type="button" class="btn btn-xs btn-default" id="test_oko_json">
                                     <span class="glyphicon glyphicon-share" aria-hidden="true"></span><?php echo session::getInstance()->getLabel('lang.text.page.admin.test'); ?>
                                 </button>
                             </div>
     					</div>
     				
     				</fieldset>
+					
+					<div id="form-mail" <?php if (GET_CHAUDIERE_DATA_BY_IP != 2) { echo 'style="display: none;"';} ?>>
+						<legend><?php echo session::getInstance()->getLabel('lang.text.page.admin.mailcomm'); ?></legend>
+    					
+							<div class="form-group" id="form-host">
+								<label class="col-md-4 control-label" for="oko_ip"><?php echo session::getInstance()->getLabel('lang.text.page.admin.mailhost'); ?></label>  
+								<div class="col-md-3">
+									<input id="mail_host" name="mail_host" type="text" class="form-control input-md" placeholder="ex : 127.0.0.1" value="<?php echo URL_MAIL; ?>" title="<?php echo session::getInstance()->getLabel('lang.tooltip.mailHost'); ?>">
+
+								</div>
+								
+							</div>
+						
+							<div class="form-group" id="form-login">
+								<label class="col-md-4 control-label" for="oko_ip"><?php echo session::getInstance()->getLabel('lang.text.page.admin.maillog'); ?></label>  
+								<div class="col-md-3">
+									<input id="mail_log" name="mail_log" type="text" class="form-control input-md" placeholder="login" value="<?php echo LOGIN_MAIL; ?>">
+								</div>
+							</div>
+							
+							<div class="form-group" id="form-loginPwd">
+								<label class="col-md-4 control-label" for="oko_ip"><?php echo session::getInstance()->getLabel('lang.text.page.admin.mailpwd'); ?></label>  
+								<div class="col-md-3">
+									<input id="mail_pwd" name="mail_pwd" type="text" class="form-control input-md" placeholder="password" value="<?php echo PASSWORD_MAIL; ?>">
+								</div>
+								<div class="col-md-3">
+									<button type="button" class="btn btn-xs btn-default" id="test_mail">
+										<span class="glyphicon glyphicon-share" aria-hidden="true"></span><?php echo session::getInstance()->getLabel('lang.text.page.admin.test'); ?>
+									</button>
+								</div>
+							</div>
+					</div>
     				
     				<fieldset>
     				    <legend><?php echo session::getInstance()->getLabel('lang.text.page.admin.param'); ?></legend>
@@ -108,12 +157,30 @@
     					  <span class="help-block"><?php echo session::getInstance()->getLabel('lang.text.page.admin.param.surface.desc'); ?></span>  
     					  </div>
     					</div>
-				
+
+    					<!-- Text input-->
+    					<div class="form-group">
+    					  <label class="col-md-4 control-label" for="param_pci_pellet">Pouvoir Calorifique du pellet (kWh/kg)</label>
+    					  <div class="col-md-3">
+    					  <input id="param_pci_pellet" name="param_pci_pellet" type="number" step="0.01" min="0" max="10" placeholder="ex : 4.90" class="form-control input-md" value="<?php echo PCI_PELLET; ?>">
+    					  <span class="help-block">Pouvoir Calorifique Inférieur du pellet utilisé (0–10 kWh/kg). Valeur typique : 4,90 kWh/kg.</span>
+    					  </div>
+    					</div>
+
+    					<!-- Text input-->
+    					<div class="form-group">
+    					  <label class="col-md-4 control-label" for="param_rendement">Rendement de la chaudière (%)</label>
+    					  <div class="col-md-3">
+    					  <input id="param_rendement" name="param_rendement" type="number" step="0.01" min="0" max="100" placeholder="ex : 89.50" class="form-control input-md" value="<?php echo RENDEMENT_CHAUDIERE; ?>">
+    					  <span class="help-block">Rendement de combustion de la chaudière (0–100 %). Valeur typique : 89,50 %.</span>
+    					  </div>
+    					</div>
+
 				    </fieldset>
-    			
+
 
                     <fieldset>
-    				
+
     				<!-- Form Name -->
     					<legend><?php echo session::getInstance()->getLabel('lang.text.page.admin.silo'); ?></legend>
     					
@@ -170,9 +237,26 @@
     					 
     					</div>
     					
-    				</fieldset> 
-                    
-                    
+    				</fieldset>
+
+				<fieldset>
+					<legend>Token API Home Assistant</legend>
+
+					<div class="form-group">
+					  <label class="col-md-4 control-label" for="api_token_display">Token d'authentification (12 caractères)</label>
+					  <div class="col-md-3">
+					  	<input id="api_token_display" type="text" class="form-control input-md" readonly value="<?php echo substr(TOKEN, 0, 12); ?>" style="font-family:monospace;">
+					  	<span class="help-block">Utilisé pour authentifier les appels à <code>ha_api.php?token=…</code></span>
+					  </div>
+					  <div class="col-md-3">
+					  	<button type="button" class="btn btn-warning btn-sm" id="bt_regen_token">
+					  		<span class="glyphicon glyphicon-refresh"></span> Générer un nouveau token
+					  	</button>
+					  </div>
+					</div>
+				</fieldset>
+
+
     			</form>
                 <div  align="center">
 					    <button id="bt_save_infoge" name="bt_save_infoge" class="btn btn-primary" type="button"><?php echo session::getInstance()->getLabel('lang.text.page.admin.save'); ?></button>

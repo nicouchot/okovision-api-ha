@@ -79,6 +79,7 @@ class okofen extends connectDb
      */
     public function getDateFromFilename($dataFilename)
     {
+	    print_r($dataFilename);
         $matches = [];
         if (preg_match('@touch_([0-9]{4})([0-9]{2})([0-9]{2})\.csv@', $dataFilename, $matches)) {
             $year = $matches[1];
@@ -310,8 +311,6 @@ class okofen extends connectDb
 
     private function insertSyntheseDay($day)
     {
-        $query = 'INSERT INTO oko_resume_day ( jour, tc_ext_max, tc_ext_min, conso_kg, conso_ecs_kg, dju, nb_cycle ) VALUE ';
-
         $rendu = new rendu();
         $max = $rendu->getTcMaxByDay($day);
         $min = $rendu->getTcMinByDay($day);
@@ -320,11 +319,61 @@ class okofen extends connectDb
         $dju = $rendu->getDju($max->tcExtMax, $min->tcExtMin);
         $cycle = $rendu->getNbCycleByDay($day);
 
-        $consoPellet = (null == $conso->consoPellet) ? 0 : $conso->consoPellet;
-        $consoEcsPellet = (null == $conso_ecs->consoPellet) ? 0 : $conso_ecs->consoPellet;
-        $nbCycle = (null == $cycle->nbCycle) ? 0 : $cycle->nbCycle;
+        $consoPellet    = (null == $conso->consoPellet)     ? 0 : (float) $conso->consoPellet;
+        $consoEcsPellet = (null == $conso_ecs->consoPellet) ? 0 : (float) $conso_ecs->consoPellet;
+        $nbCycle        = (null == $cycle->nbCycle)         ? 0 : (int) $cycle->nbCycle;
+        $consoKwh       = round($consoPellet * PCI_PELLET * (RENDEMENT_CHAUDIERE / 100), 2);
 
-        $query .= "('".$day."', ".$max->tcExtMax.', '.$min->tcExtMin.', '.$consoPellet.', '.$consoEcsPellet.', '.$dju.', '.$nbCycle.' );';
+        /* ── Cumulatifs (cumul du jour précédent + valeurs du jour) ── */
+        $prevQ  = "SELECT IFNULL(cumul_kg, 0) as c_kg, IFNULL(cumul_kwh, 0) as c_kwh,
+                          IFNULL(cumul_cycle, 0) as c_cycle
+                   FROM oko_resume_day WHERE jour < '{$day}' ORDER BY jour DESC LIMIT 1";
+        $prevR  = $this->query($prevQ);
+        $prev   = $prevR ? $prevR->fetch_object() : null;
+
+        $cumulKg    = round(($prev ? (float) $prev->c_kg    : 0) + $consoPellet, 2);
+        $cumulKwh   = round(($prev ? (float) $prev->c_kwh   : 0) + $consoKwh,   2);
+        $cumulCycle = ($prev ? (int) $prev->c_cycle : 0) + $nbCycle;
+
+        /* ── Prix au kg – logique FIFO sur les livraisons PELLET ─────── */
+        $prixKgQ = "SELECT ROUND(e.price / e.quantity, 4) AS prix_kg
+                    FROM (
+                        SELECT e1.price, e1.quantity,
+                               (SELECT SUM(e2.quantity) FROM oko_silo_events e2
+                                WHERE e2.event_type='PELLET' AND e2.event_date <= e1.event_date
+                               ) AS cumul_livraison
+                        FROM oko_silo_events e1
+                        WHERE e1.event_type = 'PELLET' AND e1.quantity > 0
+                    ) e
+                    WHERE e.cumul_livraison >= {$cumulKg}
+                    ORDER BY e.cumul_livraison ASC
+                    LIMIT 1";
+        $prixKgR   = $this->query($prixKgQ);
+        $prixKgRow = $prixKgR ? $prixKgR->fetch_object() : null;
+
+        if (!$prixKgRow) {
+            // Fallback : utilise la dernière livraison connue
+            $lastQ     = "SELECT ROUND(price / quantity, 4) AS prix_kg
+                          FROM oko_silo_events
+                          WHERE event_type='PELLET' AND quantity > 0
+                          ORDER BY event_date DESC LIMIT 1";
+            $lastR     = $this->query($lastQ);
+            $prixKgRow = $lastR ? $lastR->fetch_object() : null;
+        }
+
+        $prixKg  = $prixKgRow ? (float) $prixKgRow->prix_kg : null;
+        $energieParKg = PCI_PELLET * RENDEMENT_CHAUDIERE / 100;
+        $prixKwh = ($prixKg !== null && $energieParKg > 0) ? round($prixKg / $energieParKg, 4) : null;
+
+        $prixKgSql  = ($prixKg  !== null) ? $prixKg  : 'NULL';
+        $prixKwhSql = ($prixKwh !== null) ? $prixKwh : 'NULL';
+
+        /* ── INSERT ──────────────────────────────────────────────────── */
+        $query  = 'INSERT INTO oko_resume_day ';
+        $query .= '( jour, tc_ext_max, tc_ext_min, conso_kg, conso_ecs_kg, conso_kwh, ';
+        $query .= '  cumul_kg, cumul_kwh, cumul_cycle, prix_kg, prix_kwh, dju, nb_cycle ) VALUE ';
+        $query .= "('{$day}', {$max->tcExtMax}, {$min->tcExtMin}, {$consoPellet}, {$consoEcsPellet}, {$consoKwh}, ";
+        $query .= " {$cumulKg}, {$cumulKwh}, {$cumulCycle}, {$prixKgSql}, {$prixKwhSql}, {$dju}, {$nbCycle} );";
 
         $this->log->debug('Class '.__CLASS__.' | '.__FUNCTION__.' | '.$query);
 

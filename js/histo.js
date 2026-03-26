@@ -97,6 +97,25 @@ $(document).ready(function() {
 					}
 				}
 
+				// kWh consommés
+				json[5].type = "column";
+				json[5].color = "#FF6B35";
+				json[5].zIndex = 1;
+				json[5].yAxis = 3;
+				json[5].dataLabels = {
+					enabled: true,
+					rotation: -90,
+					color: '#FFFFFF',
+					align: 'right',
+					x: 3,
+					y: 10,
+					style: {
+						fontSize: '9px',
+						fontFamily: 'Verdana, sans-serif',
+						textShadow: '0 0 3px black'
+					}
+				};
+
 				var chart = new Highcharts.Chart({
 					chart: {
 						renderTo: div_histo_tempe,
@@ -152,6 +171,14 @@ $(document).ready(function() {
 						min: 0,
 						max: 50,
 						opposite: true
+					}, {
+						gridLineWidth: 0,
+						title: {
+							text: 'kWh',
+							style: { color: '#FF6B35' }
+						},
+						min: 0,
+						opposite: true
 					}],
 					plotOptions: {
 						line: {
@@ -200,6 +227,7 @@ $(document).ready(function() {
 				$("#consoEcsPellet").text(DecSepa(((json.consoEcsPellet === null) ? 0.0 : json.consoEcsPellet) + " Kg"));
 				$("#dju").text(DecSepa(json.dju + ""));
 				$("#cycle").text(DecSepa(json.nbCycle + ""));
+				$("#consoKwh").text(DecSepa(((json.consoKwh === null) ? "0" : parseFloat(json.consoKwh).toFixed(2)) + " kWh"));
 
 
 			})
@@ -267,6 +295,7 @@ $(document).ready(function() {
 				$("#consoEcsPelletSaison").text(DecSepa(((json.consoEcsPellet === null) ? 0.0 : json.consoEcsPellet) + " Kg"));
 				$("#djuSaison").text(DecSepa(json.dju + ""));
 				$("#cycleSaison").text(DecSepa(json.nbCycle + ""));
+				$("#consoKwhSaison").text(DecSepa(((json.consoKwh === null) ? "0" : parseFloat(json.consoKwh).toFixed(2)) + " kWh"));
 
 			})
 			.error(function() {
@@ -333,6 +362,25 @@ $(document).ready(function() {
 				json[5].zIndex = 1;
 				json[5].yAxis = 1;
 
+				// kWh consommés
+				json[6].type = "column";
+				json[6].color = "#FF6B35";
+				json[6].zIndex = 1;
+				json[6].yAxis = 3;
+				json[6].dataLabels = {
+					enabled: true,
+					rotation: -90,
+					color: '#FFFFFF',
+					align: 'right',
+					x: 3,
+					y: 10,
+					style: {
+						fontSize: '9px',
+						fontFamily: 'Verdana, sans-serif',
+						textShadow: '0 0 3px black'
+					}
+				};
+
 				var chart = new Highcharts.Chart({
 					chart: {
 						renderTo: "saison_graphic",
@@ -383,6 +431,14 @@ $(document).ready(function() {
 						},
 						//	min : 0 ,	max : 50,
 						opposite: true
+					}, {
+						gridLineWidth: 0,
+						title: {
+							text: 'kWh',
+							style: { color: '#FF6B35' }
+						},
+						min: 0,
+						opposite: true
 					}],
 					plotOptions: {
 						line: {
@@ -430,6 +486,7 @@ $(document).ready(function() {
         	                                            <td>'+ val.dju +'</td> \
 														<td>'+ val.conso +'</td> \
 														<td>'+ val.conso_ecs +'</td> \
+														<td>'+ val.conso_kwh +'</td> \
         	                                            <td>'+ val.g_dju_m+'</td> \
         	                                          </tr>');
                 });

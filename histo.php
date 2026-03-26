@@ -65,6 +65,7 @@
 			<div class="col-md-12">
 				<span class="glyphicon glyphicon-cloud"></span> <?php echo session::getInstance()->getLabel('lang.text.page.label.dju'); ?> <span id="dju" class="label label-primary">0</span> &nbsp;&nbsp;
 				<span class="glyphicon glyphicon-hand-right"></span> <?php echo session::getInstance()->getLabel('lang.text.page.label.nbcycle'); ?> <span id="cycle" class="label label-primary">0</span> &nbsp;&nbsp;
+				<span class="glyphicon glyphicon-flash"></span> Énergie <span id="consoKwh" class="label label-default">0 kWh</span> &nbsp;&nbsp;
 			</div>
 
 			
@@ -94,9 +95,9 @@
 				</select>
 			</div>
 			<div class="col-md-12">
-				<span class="glyphicon glyphicon-cloud"></span> <?php echo session::getInstance()->getLabel('lang.text.page.label.dju'); ?> <span id="djuSaison" class="label label-primary">0</span>
-				<span class="glyphicon glyphicon-hand-right"></span> <?php echo session::getInstance()->getLabel('lang.text.page.label.nbcycle'); ?> <span id="cycleSaison" class="label label-primary">0</span>
-			
+				<span class="glyphicon glyphicon-cloud"></span> <?php echo session::getInstance()->getLabel('lang.text.page.label.dju'); ?> <span id="djuSaison" class="label label-primary">0</span> &nbsp;&nbsp;
+				<span class="glyphicon glyphicon-hand-right"></span> <?php echo session::getInstance()->getLabel('lang.text.page.label.nbcycle'); ?> <span id="cycleSaison" class="label label-primary">0</span> &nbsp;&nbsp;
+				<span class="glyphicon glyphicon-flash"></span> Énergie <span id="consoKwhSaison" class="label label-default">0 kWh</span>
 			</div>
 		</div>
 		
@@ -112,6 +113,7 @@
 	                <th class="col-md-2">DJU</th>
 					<th class="col-md-2">Conso (Kg)</th>
 					<th class="col-md-2">Dont ECS (Kg)</th>
+					<th class="col-md-2">Énergie (kWh)</th>
 	                <th class="col-md-2">gr/DJU/m2</th>
 	                
 	            </tr>

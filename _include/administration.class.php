@@ -1,7 +1,7 @@
 <?php
 /*
 * Projet : Okovision - Supervision chaudiere OeKofen
-* Auteur : Stawen Dronek
+* Auteur : Stawen Dronek mod by skydarc for V2
 * Utilisation commerciale interdite sans mon accord
 */
 
@@ -60,6 +60,11 @@ class administration extends connectDb
 
         $param = [
             'chaudiere' => $s['oko_ip'],
+			'port_json' => $s['oko_json_port'],
+			'password_json' => $s['oko_json_pwd'],
+			'url_mail' =>  $s['mail_host'],
+			'login_mail' =>  $s['mail_log'],
+			'password_mail' =>  $s['mail_pwd'],
             'tc_ref' => $s['param_tcref'],
             'poids_pellet' => $s['param_poids_pellet'],
             'surface_maison' => $s['surface_maison'],
@@ -69,6 +74,8 @@ class administration extends connectDb
             'has_silo' => $s['has_silo'],
             'silo_size' => $s['silo_size'],
             'ashtray' => $s['ashtray'],
+            'pci_pellet' => $s['pci_pellet'] ?? '',
+            'rendement' => $s['rendement'] ?? '',
             'lang' => $s['lang'],
         ];
 
@@ -85,14 +92,39 @@ class administration extends connectDb
     }
 
     /**
+     * Génère un nouveau token et le persiste dans config.php.
+     *
+     * @return json response=true, token=12 premiers caractères du nouveau token
+     */
+    public function regenerateToken()
+    {
+        $newToken   = sha1(uniqid('', true));
+        $configFile = file_get_contents(CONTEXT . '/config.php');
+        $configFile = preg_replace(
+            "/DEFINE\('TOKEN','[a-f0-9]+'\);/",
+            "DEFINE('TOKEN','" . $newToken . "');",
+            $configFile
+        );
+
+        $ok = file_put_contents(CONTEXT . '/config.php', $configFile);
+
+        $r = [
+            'response' => (bool) $ok,
+            'token'    => substr($newToken, 0, 12),
+        ];
+
+        $this->sendResponse($r);
+    }
+
+    /**
      * Get file list from boiler.
      *
      * @return json this list
      */
-    public function getFileFromChaudiere()
+    public function getFileFromChaudiere_v3()
     {
         $r['response'] = true;
-
+		
         $htmlCode = file_get_contents('http://'.CHAUDIERE.URL);
 
         $dom = new DOMDocument();
@@ -118,6 +150,158 @@ class administration extends connectDb
         $r['listefiles'] = $t_href;
 
         $this->sendResponse($r);
+    }
+	
+	/**
+     * Get file list from boiler in v4. a supprimer car csv pas toujours dispo skydarc
+     *
+     * @return json this list
+     */
+    public function getFileFromChaudiere()
+    {
+        $r['response'] = true;
+		
+		ini_set('auto_detect_line_endings',TRUE);
+	
+		$ch = curl_init('http://192.168.1.2:4321/Ob9v/log0');
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+		$csv = utf8_encode(curl_exec($ch));
+		
+		$Data = str_getcsv($csv, "\n"); //parse the rows
+
+		foreach($Data as $key => $Row) {
+			$Row = str_getcsv($Row, ";"); 
+			$array[$key] = $Row; 
+		}
+		$dateArray = explode(".", $array[1][0]);
+		//echo('touch_'.$dateArray[2].$dateArray[1].$dateArray[0]);
+		
+		//echo($array[1][0]);
+		
+        $t_href = [];
+        for($i = 0; $i < 4; $i++) {
+			
+			$logDate = date('Ymd', strtotime($dateArray[2].'-'.$dateArray[1].'-'.$dateArray[0] .' +'.$i.' day'));
+			
+            array_push(
+                $t_href,
+                [
+                    'file' => 'log'.$i.' : touch_'.$logDate.'.csv',
+                    'url' => 'http://'.CHAUDIERE.':'.PORT_JSON.'/'.PASSWORD_JSON.'/log'.$i,
+                ]
+            );
+
+        }
+        $r['listefiles'] = $t_href;
+
+        $this->sendResponse($r);
+    }
+
+	/**
+     * Get file list from boiler in v4. a supprimer car csv pas toujours dispo skydarc
+     *
+     * @return json this list
+     */
+    public function getFileFromMailBox()
+    {
+        error_reporting(0);
+		
+		
+		
+		$imap_connection = imap_open(URL_MAIL, LOGIN_MAIL, PASSWORD_MAIL) ;
+		
+		$emails = imap_search($imap_connection,'ALL');
+		
+		$t['response'] = true;
+		$t['listefiles'] = 'test_test';
+		
+		$this->sendResponse($t);
+		
+		
+		/* if emails are returned, cycle through each... */
+		/*if($emails) {
+			
+			$r['response'] = true;
+			
+			foreach($emails as $value => $email_number) {
+
+				$structure = imap_fetchstructure($imap_connection,$email_number);
+				
+				//echo $email_number." - ";
+				
+				$attachments = array();
+				if(isset($structure->parts) && count($structure->parts)) {
+
+					for($i = 0; $i < count($structure->parts); $i++) {
+
+						$attachments[$i] = array(
+							'is_attachment' => false,
+							'filename' => '',
+							'name' => '',
+							'attachment' => ''
+						);
+
+						if($structure->parts[$i]->ifdparameters) {
+							foreach($structure->parts[$i]->dparameters as $object) {
+								if(strtolower($object->attribute) == 'filename') {
+									$attachments[$i]['is_attachment'] = true;
+									$attachments[$i]['filename'] = $object->value;
+								}
+							}
+						}
+
+						if($structure->parts[$i]->ifparameters) {
+							foreach($structure->parts[$i]->parameters as $object) {
+								if(strtolower($object->attribute) == 'name') {
+									$attachments[$i]['is_attachment'] = true;
+									$attachments[$i]['name'] = $object->value;
+								}
+							}
+						}
+
+						if($attachments[$i]['is_attachment']) {
+							$attachments[$i]['attachment'] = imap_fetchbody($imap_connection, $email_number, $i+1);
+							if($structure->parts[$i]->encoding == 3) { // 3 = BASE64
+								$attachments[$i]['attachment'] = base64_decode($attachments[$i]['attachment']);
+							}
+							elseif($structure->parts[$i]->encoding == 4) { // 4 = QUOTED-PRINTABLE
+								$attachments[$i]['attachment'] = quoted_printable_decode($attachments[$i]['attachment']);
+							}
+						}
+					}
+				}
+				
+				foreach ($attachments as $key => $attachment) {
+					$name = $attachment['name'];
+					
+					$contents = $attachment['attachment'];
+					
+					if($name != "") {
+						
+						//echo $name;
+						
+						array_push(
+							$t_href,
+							[
+								'file' => $name,
+							]
+						);
+					}
+					
+				}
+				
+			} 
+			
+			$r['listefiles'] = $t_href;
+
+			$this->sendResponse($r);
+		
+		} else {
+			
+			$r['response'] = false;
+			
+		}*/
+
     }
 
     /**
