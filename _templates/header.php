@@ -3,12 +3,14 @@
  $pageNotLogged = ['setup.php', 'index.php', 'histo.php'];
 
  if (!in_array($page, $pageNotLogged) && !session::getInstance()->getVar('logged')) {
-     header('Location: /errors/401.php');
+     $basePath = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/');
+    header('Location: ' . $basePath . '/errors/401.php');
      exit();
  }
 ?>
-<!DOCTYPE html> 
-<html lang="fr">
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<!-- saved from url=(0014)about:internet -->
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="fr" lang="fr">
   <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -32,6 +34,37 @@
       <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>+
     <![endif]-->
 	<?php //include_once("analyticstracking.php");?>
+	
+	<script type="text/javascript">
+		function afficheBar(){
+
+			//var id = $(this).closest('.row').find('.huge').attr("id");
+			//var name = $(this).closest('.panel').find('.labelbox').text();
+			//var value = $(this).closest('.row').find('.huge').text().split(" ")[0];
+			
+			
+			//$("#modal_change").modal('show');
+			
+			$.get('test.php', function(data) {
+					
+					alert(data);
+					
+					
+				});
+			
+		
+			
+			/*$.api('POST', 'rt.getSensorInfo_v4', {
+				sensor: id
+			}).done(function(json) {
+				
+				//json = "eee";
+				alert(json);
+				
+			});*/
+		};
+		afficheBar();
+	</script>
 	
 	</head>
 

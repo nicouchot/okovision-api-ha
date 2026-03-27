@@ -388,6 +388,13 @@ class rendu extends connectDb
                     ]
                 )
             );
+        } else {
+            $this->sendResponse(
+                json_encode([
+                    'remain'  => round($remain, 1),
+                    'percent' => round(100 * $r->consoPellet / ASHTRAY),
+                ])
+            );
         }
     }
 

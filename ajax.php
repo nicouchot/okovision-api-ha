@@ -4,6 +4,8 @@
  * Auteur : Stawen Dronek
  * Utilisation commerciale interdite sans mon accord.
  */
+// Prevent PHP warnings/notices from corrupting JSON responses
+ini_set('display_errors', 0);
 include_once 'config.php';
 
 function is_ajax()
