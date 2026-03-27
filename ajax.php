@@ -19,7 +19,9 @@ function is_valid()
     return (0 == strcmp(session::getInstance()->getVar('sid'), $_GET['sid'])) ? true : false;
 }
 
-if (is_ajax() && is_valid()) {
+// is_ajax() check removed: Synology nginx strips X-Requested-With on local LAN access.
+// is_valid() (session SID) is sufficient as CSRF protection.
+if (is_valid()) {
     if (isset($_GET['type'], $_GET['action'])) {
         /*
         * TODO
@@ -340,11 +342,6 @@ if (is_ajax() && is_valid()) {
             }
     }
 } else {
-    if (!is_ajax()) {
-        echo '<pre>xmlhttprequest needed ! </pre>';
-    }
-    if (!is_valid()) {
-        header('Content-type: text/json; charset=utf-8');
-        echo '{"response": false,"sessionToken": "invalid"}';
-    }
+    header('Content-type: application/json; charset=utf-8');
+    echo '{"response": false,"sessionToken": "invalid"}';
 }
