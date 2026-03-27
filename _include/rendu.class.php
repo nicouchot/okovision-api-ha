@@ -226,15 +226,15 @@ class rendu extends connectDb
         $this->log->debug('Class '.__CLASS__.' | '.__FUNCTION__.' | '.$q);
 
         $result = $this->query($q);
-        $r = $result->fetch_object();
+        $r = $result ? $result->fetch_object() : null;
 
-        $this->sendResponse(json_encode(['tcExtMax' => $r->tcExtMax,
-            'tcExtMin' => $r->tcExtMin,
-            'consoPellet' => $r->consoPellet,
-            'consoEcsPellet' => $r->consoEcsPellet,
-            'dju' => $r->dju,
-            'nbCycle' => $r->nbCycle,
-            'consoKwh' => $r->consoKwh,
+        $this->sendResponse(json_encode(['tcExtMax' => $r->tcExtMax ?? null,
+            'tcExtMin' => $r->tcExtMin ?? null,
+            'consoPellet' => $r->consoPellet ?? null,
+            'consoEcsPellet' => $r->consoEcsPellet ?? null,
+            'dju' => $r->dju ?? null,
+            'nbCycle' => $r->nbCycle ?? null,
+            'consoKwh' => $r->consoKwh ?? null,
         ], JSON_NUMERIC_CHECK));
     }
 
@@ -425,8 +425,10 @@ class rendu extends connectDb
             $result = $this->query($q);
 
             $data = [];
-            while ($r = $result->fetch_row()) {
-                $data[] = $r[0];
+            if ($result) {
+                while ($r = $result->fetch_row()) {
+                    $data[] = $r[0];
+                }
             }
 
             array_push(
@@ -527,8 +529,10 @@ class rendu extends connectDb
         $result = $this->query($q);
 
         $data = [];
-        while ($r = $result->fetch_object()) {
-            $data[] = $r;
+        if ($result) {
+            while ($r = $result->fetch_object()) {
+                $data[] = $r;
+            }
         }
         $this->sendResponse(json_encode($data, JSON_NUMERIC_CHECK));
     }
@@ -567,6 +571,7 @@ class rendu extends connectDb
         $result = $this->query($q);
         $data = null;
 
+        if (!$result) { return '[]'; }
         while ($r = $result->fetch_object()) {
             if (null !== $r->value) {
                 //$date = new DateTime($r->jour." ".$r->heure,new DateTimeZone(date_default_timezone_get()));

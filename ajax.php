@@ -6,6 +6,17 @@
  */
 // Prevent PHP warnings/notices from corrupting JSON responses
 ini_set('display_errors', 0);
+error_reporting(E_ALL & ~E_NOTICE & ~E_DEPRECATED);
+
+// Catch any uncaught exception and return valid JSON instead of HTTP 500
+set_exception_handler(function ($e) {
+    if (!headers_sent()) {
+        http_response_code(200);
+        header('Content-Type: application/json; charset=utf-8');
+    }
+    echo json_encode(['response' => false, 'error' => $e->getMessage()]);
+});
+
 include_once 'config.php';
 
 function is_ajax()
