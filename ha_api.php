@@ -137,6 +137,17 @@ class HaRendu extends rendu
         $prevTcMax   = ($prev && $prev->tc_ext_max !== null) ? (float)$prev->tc_ext_max : null;
         $prevTcMin   = ($prev && $prev->tc_ext_min !== null) ? (float)$prev->tc_ext_min : null;
 
+        /* ── Coût cumulé (historique stocké + contribution du jour) ──── */
+        $cumulCoutQ   = "SELECT ROUND(SUM(conso_kg * prix_kg), 2) AS cumul_cout
+                         FROM oko_resume_day
+                         WHERE jour < '{$jour}'";
+        $cumulCoutR   = $this->query($cumulCoutQ);
+        $cumulCoutRow = $cumulCoutR ? $cumulCoutR->fetch_object() : null;
+        $cumulCoutHisto = ($cumulCoutRow && $cumulCoutRow->cumul_cout !== null)
+            ? (float) $cumulCoutRow->cumul_cout : 0;
+        $prixKgEffectif = $prixKg ?? $prevPrixKg;
+        $cumulCout = round($cumulCoutHisto + ($consoKg ?? 0) * ($prixKgEffectif ?? 0), 2);
+
         return [
             'date'         => $jour,
             // dju : 0 si températures pas encore disponibles
@@ -152,8 +163,9 @@ class HaRendu extends rendu
             'cumul_kg'     => $cumulKg,
             'cumul_kwh'    => $cumulKwh,
             'cumul_cycle'  => $cumulCycle,
+            'cumul_cout'   => $cumulCout,
             // prix : FIFO live si conso disponible, sinon dernière valeur connue
-            'prix_kg'      => $prixKg      ?? $prevPrixKg,
+            'prix_kg'      => $prixKgEffectif,
             'prix_kwh'     => $prixKwh     ?? $prevPrixKwh,
             // températures : mesure du jour si dispo, sinon dernière connue
             'tc_ext_max'   => $tcMax       ?? $prevTcMax,
@@ -168,11 +180,15 @@ class HaRendu extends rendu
      */
     public function getResumeDay(string $jour): ?array
     {
-        $q = "SELECT jour, dju, conso_kg, conso_ecs_kg, conso_kwh,
-                     cumul_kg, cumul_kwh, cumul_cycle, prix_kg, prix_kwh,
-                     nb_cycle, tc_ext_max, tc_ext_min
-              FROM oko_resume_day
-              WHERE jour = '" . $this->escape($jour) . "'
+        $jourEscaped = $this->escape($jour);
+        $q = "SELECT d.jour, d.dju, d.conso_kg, d.conso_ecs_kg, d.conso_kwh,
+                     d.cumul_kg, d.cumul_kwh, d.cumul_cycle, d.prix_kg, d.prix_kwh,
+                     d.nb_cycle, d.tc_ext_max, d.tc_ext_min,
+                     (SELECT ROUND(SUM(h.conso_kg * h.prix_kg), 2)
+                      FROM oko_resume_day h
+                      WHERE h.jour <= '{$jourEscaped}') AS cumul_cout
+              FROM oko_resume_day d
+              WHERE d.jour = '{$jourEscaped}'
               LIMIT 1";
 
         $this->log->debug('HaRendu::getResumeDay | ' . $q);
@@ -192,6 +208,7 @@ class HaRendu extends rendu
             'cumul_kg'     => isset($r->cumul_kg)     ? (float) $r->cumul_kg     : null,
             'cumul_kwh'    => isset($r->cumul_kwh)    ? (float) $r->cumul_kwh    : null,
             'cumul_cycle'  => isset($r->cumul_cycle)  ? (int)   $r->cumul_cycle  : null,
+            'cumul_cout'   => isset($r->cumul_cout)   ? (float) $r->cumul_cout   : null,
             'prix_kg'      => isset($r->prix_kg)      ? (float) $r->prix_kg      : null,
             'prix_kwh'     => isset($r->prix_kwh)     ? (float) $r->prix_kwh     : null,
             'nb_cycle'     => isset($r->nb_cycle)     ? (int)   $r->nb_cycle     : null,

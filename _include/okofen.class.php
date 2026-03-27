@@ -335,7 +335,11 @@ class okofen extends connectDb
         $cumulKwh   = round(($prev ? (float) $prev->c_kwh   : 0) + $consoKwh,   2);
         $cumulCycle = ($prev ? (int) $prev->c_cycle : 0) + $nbCycle;
 
-        /* ── Prix au kg – logique FIFO sur les livraisons PELLET ─────── */
+        /* ── Prix au kg – logique FIFO sur les livraisons PELLET ──────────
+         * Pour chaque jour, on cherche le premier lot dont le cumul livré
+         * (depuis le début) >= cumul consommé ce jour ($cumulKg).
+         * Cela garantit qu'on n'utilise le prix d'un nouveau lot que
+         * lorsque tout le lot précédent a été physiquement consommé. */
         $prixKgQ = "SELECT ROUND(e.price / e.quantity, 4) AS prix_kg
                     FROM (
                         SELECT e1.price, e1.quantity,
@@ -352,7 +356,7 @@ class okofen extends connectDb
         $prixKgRow = $prixKgR ? $prixKgR->fetch_object() : null;
 
         if (!$prixKgRow) {
-            // Fallback : utilise la dernière livraison connue
+            // Fallback : conso cumulée dépasse toutes les livraisons connues → dernier lot
             $lastQ     = "SELECT ROUND(price / quantity, 4) AS prix_kg
                           FROM oko_silo_events
                           WHERE event_type='PELLET' AND quantity > 0

@@ -221,12 +221,14 @@ class rendu extends connectDb
 
     public function getIndicByMonth($month, $year)
     {
+        // Le coût utilise prix_kg stocké (FIFO, recalculé par recalcHistorique)
         $q = 'SELECT max(Tc_ext_max) as tcExtMax, min(Tc_ext_min) as tcExtMin, '.
                 'sum(conso_kg) as consoPellet, sum(conso_ecs_kg) as consoEcsPellet, '.
-                'sum(dju) as dju, sum(nb_cycle) as nbCycle, sum(conso_kwh) as consoKwh '.
+                'sum(dju) as dju, sum(nb_cycle) as nbCycle, sum(conso_kwh) as consoKwh, '.
+                'ROUND(SUM(conso_kg * prix_kg), 2) as coutMois '.
                 'FROM oko_resume_day '.
-                'WHERE MONTH(oko_resume_day.jour) = '.$month.' AND '.
-                'YEAR(oko_resume_day.jour) = '.$year;
+                'WHERE MONTH(jour) = '.$month.' AND '.
+                'YEAR(jour) = '.$year;
 
         $this->log->debug('Class '.__CLASS__.' | '.__FUNCTION__.' | '.$q);
 
@@ -240,6 +242,7 @@ class rendu extends connectDb
             'dju' => $r->dju ?? null,
             'nbCycle' => $r->nbCycle ?? null,
             'consoKwh' => $r->consoKwh ?? null,
+            'coutMois' => $r->coutMois ?? null,
         ], JSON_NUMERIC_CHECK));
     }
 
@@ -449,25 +452,28 @@ class rendu extends connectDb
 
     public function getTotalSaison($idSaison)
     {
-        $q = 'SELECT max(Tc_ext_max) as tcExtMax, min(Tc_ext_min) as tcExtMin, '.
-                'sum(conso_kg) as consoPellet, sum(conso_ecs_kg) as consoEcsPellet, '.
-                'sum(dju) as dju, sum(nb_cycle) as nbCycle, sum(conso_kwh) as consoKwh '.
-                'FROM oko_resume_day, oko_saisons '.
-                'WHERE oko_saisons.id = '.$idSaison.' '.
-                'AND oko_resume_day.jour BETWEEN oko_saisons.date_debut AND oko_saisons.date_fin ;';
+        // Le coût utilise prix_kg stocké (FIFO, recalculé par recalcHistorique)
+        $q = 'SELECT max(r.Tc_ext_max) as tcExtMax, min(r.Tc_ext_min) as tcExtMin, '.
+                'sum(r.conso_kg) as consoPellet, sum(r.conso_ecs_kg) as consoEcsPellet, '.
+                'sum(r.dju) as dju, sum(r.nb_cycle) as nbCycle, sum(r.conso_kwh) as consoKwh, '.
+                'ROUND(SUM(r.conso_kg * r.prix_kg), 2) as coutSaison '.
+                'FROM oko_resume_day r, oko_saisons s '.
+                'WHERE s.id = '.$idSaison.' '.
+                'AND r.jour BETWEEN s.date_debut AND s.date_fin ;';
 
         $this->log->debug('Class '.__CLASS__.' | '.__FUNCTION__.' | '.$q);
 
         $result = $this->query($q);
-        $r = $result->fetch_object();
+        $r = $result ? $result->fetch_object() : null;
 
-        $this->sendResponse(json_encode(['tcExtMax' => $r->tcExtMax,
-            'tcExtMin' => $r->tcExtMin,
-            'consoPellet' => $r->consoPellet,
-            'consoEcsPellet' => $r->consoEcsPellet,
-            'dju' => $r->dju,
-            'nbCycle' => $r->nbCycle,
-            'consoKwh' => $r->consoKwh,
+        $this->sendResponse(json_encode(['tcExtMax' => $r->tcExtMax ?? null,
+            'tcExtMin' => $r->tcExtMin ?? null,
+            'consoPellet' => $r->consoPellet ?? null,
+            'consoEcsPellet' => $r->consoEcsPellet ?? null,
+            'dju' => $r->dju ?? null,
+            'nbCycle' => $r->nbCycle ?? null,
+            'consoKwh' => $r->consoKwh ?? null,
+            'coutSaison' => $r->coutSaison ?? null,
         ], JSON_NUMERIC_CHECK));
     }
 
@@ -516,13 +522,15 @@ class rendu extends connectDb
 
     public function getSyntheseSaisonTable($idSaison)
     {
+        // Le coût utilise prix_kg stocké (FIFO, recalculé par recalcHistorique)
         $q = "select DATE_FORMAT(oko_dateref.jour,'%m-%Y') as mois, ".
                     "IFNULL(sum(oko_resume_day.nb_cycle),'-') as nbCycle, ".
                     "IFNULL(sum(oko_resume_day.conso_kg),'-') as conso, ".
                     "IFNULL(sum(oko_resume_day.conso_ecs_kg),'-') as conso_ecs, ".
                     "IFNULL(round(sum(oko_resume_day.conso_kwh),2),'-') as conso_kwh, ".
                     "IFNULL(sum(oko_resume_day.dju),'-') as dju, ".
-                    'IFNULL(round( ((sum(oko_resume_day.conso_kg) * 1000) / sum(oko_resume_day.dju) / '.SURFACE_HOUSE."),2),'-') as g_dju_m ".
+                    'IFNULL(round( ((sum(oko_resume_day.conso_kg) * 1000) / sum(oko_resume_day.dju) / '.SURFACE_HOUSE."),2),'-') as g_dju_m, ".
+                    "IFNULL(ROUND(SUM(oko_resume_day.conso_kg * oko_resume_day.prix_kg), 2), 0) as cout ".
                     'FROM oko_saisons, oko_resume_day '.
                     'RIGHT JOIN oko_dateref ON oko_dateref.jour = oko_resume_day.jour '.
                     'WHERE oko_saisons.id='.$idSaison.' AND oko_dateref.jour BETWEEN oko_saisons.date_debut AND oko_saisons.date_fin '.

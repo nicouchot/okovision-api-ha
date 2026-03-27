@@ -138,37 +138,37 @@ class administration extends connectDb
             $rowsCumul++;
         }
 
-        /* ── 3. Chargement des livraisons PELLET (FIFO) ───────────────────── */
+        /* ── 3. Chargement des lots PELLET avec leur cumul livré ─────────────
+         * cumul_kg a été recalculé à l'étape 2 : le FIFO est maintenant fiable. */
         $lotResult = $this->query(
-            "SELECT event_date, quantity, price
-             FROM oko_silo_events
-             WHERE event_type = 'PELLET' AND quantity > 0
-             ORDER BY event_date ASC"
+            "SELECT e1.event_date, e1.quantity, e1.price,
+                    (SELECT SUM(e2.quantity) FROM oko_silo_events e2
+                     WHERE e2.event_type='PELLET' AND e2.event_date <= e1.event_date) AS cumul_livraison
+             FROM oko_silo_events e1
+             WHERE e1.event_type = 'PELLET' AND e1.quantity > 0
+             ORDER BY e1.event_date ASC"
         );
 
-        $lots           = [];
-        $cumulLivraison = 0;
-
+        $lots = [];
         while ($l = $lotResult->fetch_object()) {
-            $cumulLivraison += (int) $l->quantity;
             $lots[] = [
-                'prix_kg'         => round((float) $l->price / (int) $l->quantity, 4),
-                'cumul_livraison' => $cumulLivraison,
+                'prix_kg'         => round((float) $l->price / (float) $l->quantity, 4),
+                'cumul_livraison' => (float) $l->cumul_livraison,
             ];
         }
-
-        /* ── 4. Affectation du prix par jour ─────────────────────────────── */
-        $rowsPrix   = 0;
         $lastPrixKg = !empty($lots) ? $lots[count($lots) - 1]['prix_kg'] : null;
 
+        /* ── 4. Affectation FIFO du prix par jour ──────────────────────────
+         * Pour chaque jour, on cherche le premier lot dont cumul_livraison
+         * >= cumul_kg consommé : c'est le lot physiquement en cours. */
+        $rowsPrix = 0;
         if (!empty($lots)) {
             $rows2 = $this->query(
                 "SELECT jour, cumul_kg FROM oko_resume_day
                  WHERE cumul_kg IS NOT NULL ORDER BY jour ASC"
             );
-
             while ($r = $rows2->fetch_object()) {
-                $prixKg = $lastPrixKg;
+                $prixKg = $lastPrixKg; // fallback : conso dépasse toutes les livraisons
                 foreach ($lots as $lot) {
                     if ($lot['cumul_livraison'] >= (float) $r->cumul_kg) {
                         $prixKg = $lot['prix_kg'];
@@ -176,10 +176,8 @@ class administration extends connectDb
                     }
                 }
                 $prixKwh    = ($prixKg !== null && $energieParKg > 0)
-                    ? round($prixKg / $energieParKg, 4)
-                    : null;
+                    ? round($prixKg / $energieParKg, 4) : null;
                 $prixKwhSql = ($prixKwh !== null) ? $prixKwh : 'NULL';
-
                 $this->query(
                     "UPDATE oko_resume_day
                      SET prix_kg = {$prixKg}, prix_kwh = {$prixKwhSql}

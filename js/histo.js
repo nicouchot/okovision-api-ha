@@ -228,6 +228,7 @@ $(document).ready(function() {
 				$("#dju").text(DecSepa(json.dju + ""));
 				$("#cycle").text(DecSepa(json.nbCycle + ""));
 				$("#consoKwh").text(DecSepa(((json.consoKwh === null) ? "0" : parseFloat(json.consoKwh).toFixed(2)) + " kWh"));
+				$("#coutMois").text(DecSepa((json.coutMois !== null && json.coutMois !== undefined ? parseFloat(json.coutMois).toFixed(2) : "0") + " €"));
 
 
 			})
@@ -296,6 +297,7 @@ $(document).ready(function() {
 				$("#djuSaison").text(DecSepa(json.dju + ""));
 				$("#cycleSaison").text(DecSepa(json.nbCycle + ""));
 				$("#consoKwhSaison").text(DecSepa(((json.consoKwh === null) ? "0" : parseFloat(json.consoKwh).toFixed(2)) + " kWh"));
+				$("#coutSaison").text(DecSepa((json.coutSaison !== null && json.coutSaison !== undefined ? parseFloat(json.coutSaison).toFixed(2) : "0") + " €"));
 
 			})
 			.error(function() {
@@ -480,6 +482,9 @@ $(document).ready(function() {
 				$("#recap> tbody").html("");
 				
 				$.each(json, function(key, val) {
+                    var coutFormatted = (val.cout !== null && val.cout !== undefined && val.cout !== 0 && val.cout !== '0')
+                        ? DecSepa(parseFloat(val.cout).toFixed(2) + " €")
+                        : '-';
                     $('#recap > tbody:last').append('<tr>  \
             											<td>'+ val.mois +' </td> \
         	                                            <td>'+ val.nbCycle +'</td>  \
@@ -488,6 +493,7 @@ $(document).ready(function() {
 														<td>'+ val.conso_ecs +'</td> \
 														<td>'+ val.conso_kwh +'</td> \
         	                                            <td>'+ val.g_dju_m+'</td> \
+        	                                            <td>'+ coutFormatted +'</td> \
         	                                          </tr>');
                 });
 			});

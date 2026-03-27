@@ -5,15 +5,31 @@
 * Utilisation commerciale interdite sans mon accord
 ******************************************************/
 
-if (!file_exists("config.json")) {
-   header("Location: setup.php");
-   exit;
+// Determine app directory using multiple candidate paths.
+// Synology's default vhost has open_basedir=/web/okovision but SCRIPT_FILENAME
+// may resolve via /volume1/web/... (blocked). We try each candidate with @file_exists
+// so that open_basedir warnings are suppressed and we fall through to a working path.
+$_OKO_DIR = null;
+foreach ([
+    rtrim(dirname($_SERVER['SCRIPT_FILENAME']), '/'),
+    '/web/okovision',
+    '/volume1/web/okovision',
+] as $_candidate) {
+    if ($_candidate !== '' && @file_exists($_candidate . '/config.json')) {
+        $_OKO_DIR = $_candidate;
+        break;
+    }
 }
 
-require '_include/autoloader.class.php'; 
-Autoloader::register(); 
+if ($_OKO_DIR === null) {
+    header("Location: setup.php");
+    exit;
+}
 
-$config = json_decode(file_get_contents("config.json"), true);
+require $_OKO_DIR . '/_include/autoloader.class.php';
+Autoloader::register();
+
+$config = json_decode(file_get_contents($_OKO_DIR . '/config.json'), true);
 
 /* You can Touch */
 
@@ -65,7 +81,7 @@ DEFINE('RENDEMENT_CHAUDIERE', !empty($config['rendement']) ? (float)$config['ren
 	DONT'T TOUCH 
 ****/
 //Parametres globaux
-DEFINE('CONTEXT', '###_CONTEXT_###' );
+DEFINE('CONTEXT', $_OKO_DIR);
 date_default_timezone_set((isset($config['timezone']))?$config['timezone']:'Europe/Paris');
 
 //configuration fichier d'echange

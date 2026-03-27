@@ -66,15 +66,11 @@
 				<span class="glyphicon glyphicon-cloud"></span> <?php echo session::getInstance()->getLabel('lang.text.page.label.dju'); ?> <span id="dju" class="label label-primary">0</span> &nbsp;&nbsp;
 				<span class="glyphicon glyphicon-hand-right"></span> <?php echo session::getInstance()->getLabel('lang.text.page.label.nbcycle'); ?> <span id="cycle" class="label label-primary">0</span> &nbsp;&nbsp;
 				<span class="glyphicon glyphicon-flash"></span> Énergie <span id="consoKwh" class="label label-default">0 kWh</span> &nbsp;&nbsp;
+				<span class="glyphicon glyphicon-euro"></span> Coût du mois <span id="coutMois" class="label label-default">… €</span>
 			</div>
-
-			
-			
-			
-			
 		</div>
-		
-		<div>	
+
+		<div>
 			<div class="col-md-12" id="histo-temperature" style="width:100%; height:500px;"></div>
 			<div class="col-md-12"></div>
 		</div>
@@ -97,10 +93,11 @@
 			<div class="col-md-12">
 				<span class="glyphicon glyphicon-cloud"></span> <?php echo session::getInstance()->getLabel('lang.text.page.label.dju'); ?> <span id="djuSaison" class="label label-primary">0</span> &nbsp;&nbsp;
 				<span class="glyphicon glyphicon-hand-right"></span> <?php echo session::getInstance()->getLabel('lang.text.page.label.nbcycle'); ?> <span id="cycleSaison" class="label label-primary">0</span> &nbsp;&nbsp;
-				<span class="glyphicon glyphicon-flash"></span> Énergie <span id="consoKwhSaison" class="label label-default">0 kWh</span>
+				<span class="glyphicon glyphicon-flash"></span> Énergie <span id="consoKwhSaison" class="label label-default">0 kWh</span> &nbsp;&nbsp;
+				<span class="glyphicon glyphicon-euro"></span> Coût de la saison <span id="coutSaison" class="label label-default">… €</span>
 			</div>
 		</div>
-		
+
 		<div id="saison_graphic" style="width:100%; height:400px;"></div>
 		
 		<p>&nbsp;</p>
@@ -108,14 +105,14 @@
 		<table id="recap" class="table table-hover">
 	        <thead>
 	            <tr >
-	                <th class="col-md-2">Mois</th>
-	                <th class="col-md-2">Cycle Bruleur</th>
-	                <th class="col-md-2">DJU</th>
-					<th class="col-md-2">Conso (Kg)</th>
-					<th class="col-md-2">Dont ECS (Kg)</th>
-					<th class="col-md-2">Énergie (kWh)</th>
-	                <th class="col-md-2">gr/DJU/m2</th>
-	                
+	                <th class="col-md-1">Mois</th>
+	                <th class="col-md-1">Cycle Bruleur</th>
+	                <th class="col-md-1">DJU</th>
+					<th class="col-md-1">Conso (Kg)</th>
+					<th class="col-md-1">Dont ECS (Kg)</th>
+					<th class="col-md-1">Énergie (kWh)</th>
+	                <th class="col-md-1">gr/DJU/m2</th>
+	                <th class="col-md-1">Coût (€)</th>
 	            </tr>
 	        </thead>
 	    

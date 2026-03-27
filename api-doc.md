@@ -71,3 +71,87 @@
   - deleteConfigBoiler : Delete boiler config from db
   - getConfigBoiler : get specific config for db for load into page
   - applyBoilerConfig : Apply config on boiler
+
+---
+
+## API Home Assistant (`ha_api.php`)
+
+Endpoint dédié à l'intégration Home Assistant.
+**Authentification :** `?token=XXXX` (12 premiers caractères de TOKEN dans config.php)
+
+### `?action=today`
+
+Données live du jour en cours calculées depuis `oko_historique_full`, complétées par l'état du silo, du cendrier et de la maintenance.
+
+| Champ | Type | Description |
+|---|---|---|
+| `date` | string | Date du jour `YYYY-MM-DD` |
+| `dju` | float | Degrés-Jours Unifiés du jour (0 si températures pas encore disponibles) |
+| `conso_kg` | float | Consommation pellet du jour (kg) |
+| `conso_ecs_kg` | float | Dont eau chaude sanitaire (kg) |
+| `conso_kwh` | float | Énergie produite = conso_kg × PCI × rendement (kWh) |
+| `nb_cycle` | int | Nombre de cycles brûleur du jour |
+| `cumul_kg` | float | Total pellet consommé depuis le début (kg) — base veille + jour en cours |
+| `cumul_kwh` | float | Total énergie produite depuis le début (kWh) |
+| `cumul_cycle` | int | Total cycles brûleur depuis le début |
+| `cumul_cout` | float | Coût cumulé total depuis le début (€) — `SUM(conso_kg × prix_kg)` tous jours passés + contribution live du jour |
+| `prix_kg` | float | Prix au kg du lot en cours, logique FIFO (€/kg) |
+| `prix_kwh` | float | Prix au kWh = prix_kg / (PCI × rendement) (€/kWh) |
+| `tc_ext_max` | float\|null | T° extérieure max du jour (°C) — fallback sur dernier jour connu avant import |
+| `tc_ext_min` | float\|null | T° extérieure min du jour (°C) — fallback sur dernier jour connu avant import |
+| `silo.remains_kg` | float | Stock pellet restant estimé (kg) |
+| `silo.capacity_kg` | float | Capacité totale du silo (kg) |
+| `silo.percent` | int | Niveau silo en % |
+| `silo.last_fill_date` | string | Date du dernier chargement |
+| `ashtray.remains_kg` | float | Capacité cendrier restante avant vidange (kg) |
+| `ashtray.capacity_kg` | float | Capacité cendrier (kg) |
+| `ashtray.percent` | int | Taux de remplissage du cendrier (%) |
+| `ashtray.needs_emptying` | bool | `true` si le cendrier doit être vidé |
+| `ashtray.last_empty_date` | string | Date du dernier vidage |
+| `maintenance.last_sweep` | string\|null | Date du dernier ramonage |
+| `maintenance.last_maintenance` | string\|null | Date du dernier entretien annuel |
+
+> **Logique de prix FIFO :** `prix_kg` correspond au lot dont le cumul livré (somme de toutes les livraisons jusqu'à cette date) est ≥ au cumul consommé (`cumul_kg`). Le prix d'un nouveau lot ne s'applique que lorsque le lot précédent est physiquement épuisé.
+
+### `?action=daily&date=YYYY-MM-DD`
+
+Résumé d'un jour précis. Utilise les données live (même structure que `today`) si la date est aujourd'hui, sinon lit `oko_resume_day` (synthèse archivée).
+
+Retourne les mêmes champs que `today` (sans `silo`, `ashtray`, `maintenance`), plus `cumul_cout` calculé comme `SUM(conso_kg × prix_kg)` jusqu'à ce jour inclus.
+
+Retourne `404` si aucune donnée n'existe pour la date demandée.
+
+### `?action=monthly&month=MM&year=YYYY`
+
+Tableau journalier complet d'un mois + totaux mensuels.
+
+```json
+{
+  "month": 3,
+  "year": 2026,
+  "totals": {
+    "dju": float,
+    "conso_kg": float,
+    "conso_ecs_kg": float,
+    "conso_kwh": float,
+    "nb_cycle": int,
+    "tc_ext_max": float|null,
+    "tc_ext_min": float|null
+  },
+  "days": [ { /* mêmes champs que daily */ } ]
+}
+```
+
+### `?action=status`
+
+Niveau silo + cendrier + maintenance uniquement (sans données de consommation).
+
+```json
+{
+  "silo": { "remains_kg", "capacity_kg", "percent", "last_fill_date" },
+  "ashtray": { "remains_kg", "capacity_kg", "percent", "needs_emptying", "last_empty_date" },
+  "maintenance": { "last_sweep", "last_maintenance" }
+}
+```
+
+> En cas de configuration manquante, `silo` ou `ashtray` retournent `{"error": "no_silo_size"}` / `{"error": "no_ashtray_info"}` etc.
