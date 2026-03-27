@@ -17,8 +17,8 @@ class realTime extends connectDb
     {
         parent::__destruct();
     }
-
-    public function getOkoValue($data = [])
+	
+	public function getOkoValue($data = [])
     {
         $o = new okofen();
         $o->requestBoilerInfo($data);
@@ -26,8 +26,9 @@ class realTime extends connectDb
         $r = [];
 
         $dataBoiler = json_decode($o->getResponseBoiler());
-
+		
         if ($o->isConnected()) {
+		
             foreach ($dataBoiler as $capt) {
                 if ('' != $capt->formatTexts) {
                     $shortTxt = 'ERROR';
@@ -45,7 +46,9 @@ class realTime extends connectDb
                         'unitText' => '',
                     ];
                 } else {
-                    $r[$capt->name] = (object) [
+                    echo $capt;
+					
+					$r[$capt->name] = (object) [
                         'value' => ('' != $capt->divisor && '???' != $capt->divisor) ? ($capt->value / $capt->divisor) : ($capt->value),
                         'unitText' => ('???' == $capt->unitText) ? '' : (('K' == $capt->unitText) ? '°C' : $capt->unitText),
                         'divisor' => $capt->divisor,

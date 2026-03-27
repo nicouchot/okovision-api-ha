@@ -32,12 +32,6 @@ $(document).ready(function() {
 			$.growlWarning(lang.error.getFileFromBoiler);
 		}
 	});
-	
-
-	
-	
-	
-
 
 	/*
 	 * import des fichiers csv distant

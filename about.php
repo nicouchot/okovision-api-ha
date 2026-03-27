@@ -21,13 +21,12 @@ if (!file_exists('config.php')) {
 		<h2><?php echo session::getInstance()->getLabel('lang.text.page.about.title'); ?></h2> <div id="version"><?php echo file_get_contents('_include/version.json'); ?></div>
 	</div>
 	<div class="well">
-		<img style='float:left;width:130px;height:130px; margin-right:20px;' src="css/images/stawen.png" alt="stawen" class="img-circle">
 
 		<?php echo session::getInstance()->getLabel('lang.text.page.about.information'); ?>
 		
 	</div>
 	<div>TOKEN API : <?php echo substr(TOKEN, 0, 12); ?></div>
-	<div class="page-header">
+	<div class="page-header" style="display: none;"> 
 		<h2><?php echo session::getInstance()->getLabel('lang.text.page.about.update'); ?></h2>
 		<button type="button" id="bt_update" class="btn btn-xs btn-default" style="display: none;">
 			<span class="glyphicon glyphicon-cloud-download" aria-hidden="true"></span>

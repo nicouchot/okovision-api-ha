@@ -52,6 +52,90 @@ $(document).ready(function() {
             $.getListConfigboiler();
         });
     };
+	
+	function dec2bin(dec){
+		var str = (dec >>> 0).toString(2);
+		return str.split("").reverse().join("");
+	}
+		
+	$.connectBoiler_v4 = function() {
+
+		$.get('_include/bin_v4/test_boiler.php').done(function(jsdata) {
+
+			const jsArray = JSON.parse(jsdata);
+			const jsResp = JSON.parse(jsArray.data);
+
+            if (jsArray.response) {
+
+                $.each(jsResp, function(key1, val1) {
+                    
+					$.each(jsResp[key1], function(key2, val2) {
+                    
+						if($('#' + key1 + '\\.' + key2).length ) {
+							
+							if(key2 == 'L_state' && !val2.format) {
+								
+								const binStat = dec2bin(val2.val);
+										
+								if(key1 == 'hk1') {
+									
+									if(binStat[5] == '1') $('#' + key1 + '\\.' + key2).html(lang.mode.conf);
+									else if(binStat[4] == '1') $('#' + key1 + '\\.' + key2).html(lang.mode.red);
+									else if(binStat[7] == '1') $('#' + key1 + '\\.' + key2).html(lang.mode.vac);
+									else $('#' + key1 + '\\.' + key2).html(lang.mode.off);
+
+								}
+								
+								if(key1 == 'ww1') {
+									
+									/*if(binStat[5]) $('#' + key1 + '\\.' + key2).html('Confort');
+									else if(binStat[4]) $('#' + key1 + '\\.' + key2).html('R&eacute;duit');
+									else if(binStat[7]) $('#' + key1 + '\\.' + key2).html('Vacances');
+									else $('#' + key1 + '\\.' + key2).html('Arr&ecirc;t');*/
+
+								}
+
+							} else {
+								
+								if(val2.unit) {
+									
+									const value = (val2.val*val2.factor);
+									
+									if(value % 1 === 0){
+									  $('#' + key1 + '\\.' + key2).html( value.toFixed(0)+' '+val2.unit);
+								    } else{
+									  $('#' + key1 + '\\.' + key2).html( value.toFixed(1)+' '+val2.unit);
+								    }
+									
+								} else {
+									
+									if(val2.format){	
+										var typeArray = val2.format.split('|');
+										var typeStr = typeArray[val2.val].split(':');
+										$('#' + key1 + '\\.' + key2).html( typeStr[1] );
+									} 
+									
+									else $('#' + key1 + '\\.' + key2).html( val2.val );
+
+								}
+							}
+						}
+						
+					});
+					
+                });
+								
+                $('#logginprogress').hide();
+                $('#communication').show();
+
+
+            }
+            else {
+                $('#logginprogress').hide();
+                $.growlErreur(lang.error.connectBoiler);
+            }
+        });
+    };
 
     $.hideData = function() {
         $('#logginprogress').show();
@@ -141,9 +225,6 @@ $(document).ready(function() {
 
     });
 
-
-
-
     $.getUpdateData = function(idGraphe) {
 
         var firstData = 0;
@@ -214,8 +295,7 @@ $(document).ready(function() {
 
     });
 
-    $.connectBoiler();
-
+	$.connectBoiler_v4();
 
     $("a[class~='change']").click(function() {
 
@@ -248,6 +328,149 @@ $(document).ready(function() {
 
 
     });
+	
+	$("a[class~='change_v4']").click(function() {
+
+		var id = $(this).closest('.row').find('.huge').attr("id");
+		var name = $(this).closest('.panel').find('.labelbox').text();
+		var value = parseFloat($(this).closest('.row').find('.huge').text().split(" ")[0]);
+				
+		//alert(value);
+		
+		$.get( "_include/bin_v4/get_captor_lim.php?id="+id, function( data ) {
+			
+			const jsArray = JSON.parse(data);
+		  
+		    var max = jsArray.max * jsArray.factor;
+            var min = jsArray.min * jsArray.factor;
+		  
+		    $("#sensorId").val(id);
+		  
+		    $("#sensorDivisor").val(jsArray.factor);
+			$("#sensorUnitText").val(jsArray.unit);
+            $("#sensorTitle").html(name);
+            $("#sensorMax").html('Max : ' + max);
+            $("#sensorMin").html('Min : ' + min);
+
+            $("#sensorValue").attr({
+                "max": max,
+                "min": min
+            });
+
+            $("#sensorValue").val(value);
+
+            $("#modal_change").modal('show');
+		});
+		
+    });
+	
+	$("a[class~='change_list_v4']").click(function() {
+
+		var id = $(this).closest('.row').find('.huge').attr("id");
+		var name = $(this).closest('.panel').find('.labelbox').text();
+		//var value = $(this).closest('.row').find('.huge').text().split(" ")[0];
+				
+		$.get( "_include/bin_v4/get_captor_lim.php?id="+id, function( data ) {
+			
+			
+			const jsArray = JSON.parse(data);
+			const oldValue = jsArray.val;
+			const strFormat = jsArray.format;
+			const arrayFormat = strFormat.split('|');
+			//data.format
+			
+			//alert(oldValue);
+			
+			const listChoise = document.getElementById("listChoise");
+			var opt;
+			
+			
+			while (listChoise.length > 0) {
+				listChoise.remove(0);
+			}
+						
+			arrayFormat.forEach((item, index) => {
+				
+				var mode = item.split(':');
+
+				opt = document.createElement("option");
+				opt.value = mode[0];
+				opt.text = mode[1];
+				if(oldValue == mode[0]) opt.selected = "selected";
+
+				listChoise.add(opt, null);
+			})
+			
+		    $("#sensorId").val(id);
+			
+			$("#sensorTitle_list").html(name);
+            $("#modal_change_list").modal('show');
+		});
+		
+    });
+	
+	$("a[class~='refresh_v4']").click(function() {
+
+		var id = $(this).closest('.row').find('.huge').attr("id");
+				
+		$.get( "_include/bin_v4/get_captor_lim.php?id="+id, function( data ) {
+			
+			
+			const jsArray = JSON.parse(data);
+			const newValue = jsArray.val;
+						
+			var idArray = id.split('.');
+			$('#'+idArray[0]+'\\.'+idArray[1]).html(newValue.toFixed(1));
+			
+			
+							if(idArray[1] == 'L_state' && !jsArray.format) {
+								
+								const binStat = dec2bin(jsArray.val);
+											
+								if(idArray[0] == 'hk1') {
+									
+									if(binStat[5] == '1') $('#' + idArray[0] + '\\.' + idArray[1]).html(lang.mode.conf);
+									else if(binStat[4] == '1') $('#' + idArray[0] + '\\.' + idArray[1]).html(lang.mode.red);
+									else if(binStat[7] == '1') $('#' + idArray[0] + '\\.' + idArray[1]).html(lang.mode.vac);
+									else $('#' + idArray[0] + '\\.' + idArray[1]).html(lang.mode.off);
+
+								}
+								
+								if(idArray[0] == 'ww1') {
+									
+									
+
+								}
+
+							} else {
+								
+								if(jsArray.unit) {
+									
+									const value = (jsArray.val*jsArray.factor);
+									
+									if(value % 1 === 0){
+									  $('#' + idArray[0] + '\\.' + idArray[1]).html( value.toFixed(0)+' '+jsArray.unit);
+								    } else{
+									  $('#' + idArray[0] + '\\.' + idArray[1]).html( value.toFixed(1)+' '+jsArray.unit);
+								    }
+									
+								} else {
+									
+									if(jsArray.format){	
+										var typeArray = jsArray.format.split('|');
+										var typeStr = typeArray[jsArray.val].split(':');
+										$('#' + idArray[0] + '\\.' + idArray[1]).html( typeStr[1] );
+									} 
+									
+									else $('#' + idArray[0] + '\\.' + idArray[1]).html( jsArray.val );
+
+								}
+							}
+			
+			
+		});
+		
+    });
 
     $("#btConfirmSensor").click(function() {
         var id = $("#sensorId").val();
@@ -256,6 +479,57 @@ $(document).ready(function() {
         $.changeSensorValue(id, newValue);
 
         $("#modal_change").modal('hide');
+    });
+	
+	$("#btConfirmSensor_v4").click(function() {
+        var id = $("#sensorId").val();
+		var unit = $("#sensorUnitText").val();
+        var newValue = $("#sensorValue").val() * (1 / $("#sensorDivisor").val());
+		
+		$.get( "_include/bin_v4/set_captor.php?id="+id+"&val="+newValue, function( data ) {
+			var retValue = data.split('=');
+			
+			newValue = retValue[1] * $("#sensorDivisor").val();
+			
+			if(isNaN(newValue)){
+				alert(id+' '+data);
+			}else{
+				var idArray = id.split('.');
+				
+				if(newValue % 1 === 0){
+					$('#'+idArray[0]+'\\.'+idArray[1]).html(newValue.toFixed(0)+' '+unit);
+				} else{
+					$('#'+idArray[0]+'\\.'+idArray[1]).html(newValue.toFixed(1)+' '+unit);
+				}
+			}
+			
+		});
+		
+        $("#modal_change").modal('hide');
+    });
+	
+	$("#btConfirmList_v4").click(function() {
+        var id = $("#sensorId").val();
+        var newValue = $("#listChoise").val();
+		
+		const listChoise = document.getElementById("listChoise");
+		
+		$.get( "_include/bin_v4/set_captor.php?id="+id+"&val="+newValue, function( data ) {
+			var retValue = data.split('=');
+			
+			newValue = retValue[1];
+			
+			if(isNaN(newValue)){
+				alert(id+' '+data);
+			}else{
+				var idArray = id.split('.');
+				
+				$('#'+idArray[0]+'\\.'+idArray[1]).html(listChoise.options[newValue].text);
+			}
+			
+		});
+	
+		 $("#modal_change_list").modal('hide');
     });
 
     $.viewMessageMustsave = function(b) {
@@ -385,7 +659,7 @@ $(document).ready(function() {
 
                     }
 
-                    $.growlValidate('Configuration sauvegardée ');
+                    $.growlValidate('Configuration sauvegardÃ©e ');
                     $("#configDescription").val("");
                     $.getListConfigboiler();
 

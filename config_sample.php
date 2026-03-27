@@ -1,35 +1,19 @@
 <?php
 /*****************************************************
 * Projet : Okovision - Supervision chaudiere OeKofen
-* Auteur : Stawen Dronek
+* Auteurs : Stawen Dronek and mod by skydarc for V2
 * Utilisation commerciale interdite sans mon accord
 ******************************************************/
 
-// Determine app directory using multiple candidate paths.
-// Synology's default vhost has open_basedir=/web/okovision but SCRIPT_FILENAME
-// may resolve via /volume1/web/... (blocked). We try each candidate with @file_exists
-// so that open_basedir warnings are suppressed and we fall through to a working path.
-$_OKO_DIR = null;
-foreach ([
-    rtrim(dirname($_SERVER['SCRIPT_FILENAME']), '/'),
-    '/web/okovision',
-    '/volume1/web/okovision',
-] as $_candidate) {
-    if ($_candidate !== '' && @file_exists($_candidate . '/config.json')) {
-        $_OKO_DIR = $_candidate;
-        break;
-    }
+if (!file_exists("config.json")) {
+   header("Location: setup.php");
+   exit;
 }
 
-if ($_OKO_DIR === null) {
-    header("Location: setup.php");
-    exit;
-}
+require '_include/autoloader.class.php'; 
+Autoloader::register(); 
 
-require $_OKO_DIR . '/_include/autoloader.class.php';
-Autoloader::register();
-
-$config = json_decode(file_get_contents($_OKO_DIR . '/config.json'), true);
+$config = json_decode(file_get_contents("config.json"), true);
 
 /* You can Touch */
 
@@ -39,10 +23,15 @@ DEFINE('DEBUG', false); //default -> false
 DEFINE('VIEW_DEBUG', false); //default -> false
 
 //ADRESS WEB de la Chaudiere
-// exemple : 192.168.0.23 ou chaudiere ou 
-// en precisant le port 192.168.0.23:8180 => <ip>:<port>
+// exemple : 192.168.0.23
 // si hebergement exterieur et que la chaudiere est accessible via l'exterieur => toto.ddns.net ou toto.ddns.net:<port>
-DEFINE('CHAUDIERE',$config['chaudiere']); // <ip>:<port> //json
+DEFINE('CHAUDIERE',$config['chaudiere']);
+DEFINE('PORT_JSON',$config['port_json']); 
+DEFINE('PASSWORD_JSON',$config['password_json']);
+//MAILBOX
+DEFINE('URL_MAIL',$config['url_mail']);
+DEFINE('LOGIN_MAIL',$config['login_mail']); 
+DEFINE('PASSWORD_MAIL',$config['password_mail']);
 //BDD
 DEFINE('BDD_IP','###_BDD_IP_###'); //default -> localhost
 DEFINE('BDD_USER','###_BDD_USER_###');
@@ -67,21 +56,19 @@ DEFINE('FTP_USER', '###_FTP_USER_###');
 DEFINE('FTP_PASS', '###_FTP_PASS_###');
 DEFINE('REP_DEPOT', '###_FTP_DEPOT_###');
 // Activation/Desctivation de la recuperation du fichier sur la chaudiere
-DEFINE('GET_CHAUDIERE_DATA_BY_IP', ($config['get_data_from_chaudiere']==1)?true:false); // default -> true //json
+DEFINE('GET_CHAUDIERE_DATA_BY_IP', $config['get_data_from_chaudiere']); // default -> true //json
 // Activation/Desctivation du transfert du fichier de la chaudiere vers une autre serveur en + de celui hebergeant l'application.
 DEFINE('SEND_TO_WEB', ($config['send_to_web']==1)?true:false); // default -> false //json
 //
 // Utilisation d'un silo
 DEFINE('HAS_SILO', ($config['has_silo']==1)?true:false); // default -> true //json
-DEFINE('SILO_SIZE', (isset($config['silo_size']))?$config['silo_size']:''); // kg
-DEFINE('ASHTRAY', (isset($config['ashtray']))?$config['ashtray']:''); // kg
-DEFINE('PCI_PELLET', !empty($config['pci_pellet']) ? (float)$config['pci_pellet'] : 4.90); // kWh/kg //json
-DEFINE('RENDEMENT_CHAUDIERE', !empty($config['rendement']) ? (float)$config['rendement'] : 89.50); // % //json
+DEFINE('SILO_SIZE', (isset($config['silo_size']))?$config['silo_size']:''); // kg 
+DEFINE('ASHTRAY', (isset($config['ashtray']))?$config['ashtray']:''); // kg 
 /****
 	DONT'T TOUCH 
 ****/
 //Parametres globaux
-DEFINE('CONTEXT', $_OKO_DIR);
+DEFINE('CONTEXT', '###_CONTEXT_###' );
 date_default_timezone_set((isset($config['timezone']))?$config['timezone']:'Europe/Paris');
 
 //configuration fichier d'echange
@@ -98,3 +85,4 @@ DEFINE('BDD_DECIMAL','.');
 //UNIQUE TOKEN ID
 DEFINE('TOKEN','###_TOKEN_###');
 //NEWPARAMUPDATE
+?>

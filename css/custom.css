@@ -127,3 +127,22 @@ div .vertical-align{
 .change:hover{
   color: white;
 }
+
+.change_v4, 
+.change_v4:hover{
+  color: white;
+}
+
+.change_list_v4, 
+.change_list_v4:hover{
+  color: white;
+}
+
+.refresh_v4, 
+.refresh_v4:hover{
+  color: white;
+}
+
+.red{
+	color: red;
+}
