@@ -77,15 +77,27 @@ class HaRendu extends rendu
             ? round($consoKg * PCI_PELLET * (RENDEMENT_CHAUDIERE / 100), 2)
             : null;
 
-        /* ── Cumulatifs depuis le dernier enregistrement en base ─────── */
-        $prevQ  = "SELECT IFNULL(cumul_kg, 0) as c_kg, IFNULL(cumul_kwh, 0) as c_kwh,
-                          IFNULL(cumul_cycle, 0) as c_cycle
-                   FROM oko_resume_day WHERE jour < '{$jour}' ORDER BY jour DESC LIMIT 1";
-        $prevR  = $this->query($prevQ);
-        $prev   = $prevR ? $prevR->fetch_object() : null;
+        /* ── Dernier enregistrement connu (veille ou antérieur) ──────── */
+        // Sert à la fois de base pour les cumulatifs ET de fallback pour les
+        // champs non encore disponibles (entre 00h00 et l'import ~6h).
+        $prevQ = "SELECT
+                      IFNULL(cumul_kg,    0) AS c_kg,
+                      IFNULL(cumul_kwh,   0) AS c_kwh,
+                      IFNULL(cumul_cycle, 0) AS c_cycle,
+                      prix_kg,
+                      prix_kwh,
+                      tc_ext_max,
+                      tc_ext_min
+                  FROM oko_resume_day
+                  WHERE jour < '{$jour}'
+                  ORDER BY jour DESC
+                  LIMIT 1";
+        $prevR = $this->query($prevQ);
+        $prev  = $prevR ? $prevR->fetch_object() : null;
 
-        $cumulKg    = round(($prev ? (float)$prev->c_kg : 0) + ($consoKg ?? 0), 2);
-        $cumulKwh   = round(($prev ? (float)$prev->c_kwh : 0) + ($consoKwh ?? 0), 2);
+        /* ── Cumulatifs (base = veille + consommation du jour si dispo) ─ */
+        $cumulKg    = round(($prev ? (float)$prev->c_kg    : 0) + ($consoKg   ?? 0), 2);
+        $cumulKwh   = round(($prev ? (float)$prev->c_kwh   : 0) + ($consoKwh  ?? 0), 2);
         $cumulCycle = ($prev ? (int)$prev->c_cycle : 0) + $nbCycle;
 
         /* ── Prix au kg FIFO (estimation sur cumulatif live) ─────────── */
@@ -117,20 +129,35 @@ class HaRendu extends rendu
             ? round($prixKg / $energieParKg, 4)
             : null;
 
+        /* ── Fallbacks pour les champs absents avant l'import du jour ── */
+        // Champs cumulatifs / prix / températures : dernière valeur connue
+        // Champs de consommation du jour          : 0 (rien consommé encore)
+        $prevPrixKg  = ($prev && $prev->prix_kg  !== null) ? (float)$prev->prix_kg  : $prixKg;
+        $prevPrixKwh = ($prev && $prev->prix_kwh !== null) ? (float)$prev->prix_kwh : $prixKwh;
+        $prevTcMax   = ($prev && $prev->tc_ext_max !== null) ? (float)$prev->tc_ext_max : null;
+        $prevTcMin   = ($prev && $prev->tc_ext_min !== null) ? (float)$prev->tc_ext_min : null;
+
         return [
             'date'         => $jour,
-            'dju'          => ($tcMax !== null && $tcMin !== null) ? $this->getDju($tcMax, $tcMin) : null,
-            'conso_kg'     => $consoKg,
-            'conso_ecs_kg' => isset($ecs->consoPellet) ? (float) $ecs->consoPellet : null,
-            'conso_kwh'    => $consoKwh,
+            // dju : 0 si températures pas encore disponibles
+            'dju'          => ($tcMax !== null && $tcMin !== null)
+                                ? $this->getDju($tcMax, $tcMin)
+                                : 0,
+            // consommations du jour : 0 avant le premier import
+            'conso_kg'     => $consoKg     ?? 0,
+            'conso_ecs_kg' => isset($ecs->consoPellet) ? (float)$ecs->consoPellet : 0,
+            'conso_kwh'    => $consoKwh    ?? 0,
+            'nb_cycle'     => $nbCycle,
+            // cumulatifs : base veille (inchangés tant qu'il n'y a pas d'import)
             'cumul_kg'     => $cumulKg,
             'cumul_kwh'    => $cumulKwh,
             'cumul_cycle'  => $cumulCycle,
-            'prix_kg'      => $prixKg,
-            'prix_kwh'     => $prixKwh,
-            'nb_cycle'     => $nbCycle ?: null,
-            'tc_ext_max'   => $tcMax,
-            'tc_ext_min'   => $tcMin,
+            // prix : FIFO live si conso disponible, sinon dernière valeur connue
+            'prix_kg'      => $prixKg      ?? $prevPrixKg,
+            'prix_kwh'     => $prixKwh     ?? $prevPrixKwh,
+            // températures : mesure du jour si dispo, sinon dernière connue
+            'tc_ext_max'   => $tcMax       ?? $prevTcMax,
+            'tc_ext_min'   => $tcMin       ?? $prevTcMin,
         ];
     }
 
