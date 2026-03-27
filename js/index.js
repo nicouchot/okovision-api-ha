@@ -245,8 +245,11 @@ $(document).ready(function() {
 						id: val.id,
 						jour: jour
 					}).done(function(json) {
-						grapheWithTime(json.grapheData, val.id, $("#" + val.id).data("graphename"));
-
+						if (json && json.grapheData) {
+							grapheWithTime(json.grapheData, val.id, $("#" + val.id).data("graphename"));
+						} else {
+							graphe_error(val.id, $("#" + val.id).data("graphename"));
+						}
 					})
 					.error(function() {
 						graphe_error(val.id, $("#" + val.id).data("graphename"));
@@ -362,6 +365,10 @@ $(document).ready(function() {
 	
 	$.api('GET', 'rendu.getGraphe').done(function(json) {
 
+			if (!json || !json.data) {
+				$.growlErreur(lang.error.getGraphe);
+				return;
+			}
 			$.each(json.data, function(key, val) {
 				$('.container-graphe').append('<div class="page-header"> \
 			                       			<div class="graphique" id="' + val.id + '" data-graphename="' + val.name + '" style="width:100%; height:400px;"></div> \

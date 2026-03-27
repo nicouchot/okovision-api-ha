@@ -31,6 +31,10 @@ class rendu extends connectDb
         $cap = new capteur();
         //$date = new DateTime();
 
+        if (!$result) {
+            $this->sendResponse('{ "grapheData": [] }');
+            return;
+        }
         while ($c = $result->fetch_object()) {
             $capteur = $cap->get($c->id);
 
@@ -43,6 +47,7 @@ class rendu extends connectDb
 
             $data = null;
 
+            if (!$res) { continue; }
             while ($r = $res->fetch_object()) {
                 //si value == null c'est qu'il n'y a pas de data donc on affiche pas la données
                 if (null !== $r->value) {
