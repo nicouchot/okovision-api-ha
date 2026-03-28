@@ -217,6 +217,62 @@ class HaRendu extends rendu
         ];
     }
 
+    /* ── Résumé journalier avec fallback si synthèse absente ────────────── */
+
+    /**
+     * Retourne le résumé d'un jour depuis oko_resume_day.
+     * Si la synthèse n'existe pas encore (typiquement : hier avant ~6h),
+     * retourne un placeholder à zéro avec les cumulatifs/prix/températures
+     * du dernier jour connu, et is_new = false.
+     * Si la synthèse existe, is_new = true.
+     */
+    public function getResumeDayWithFallback(string $jour): array
+    {
+        $data = $this->getResumeDay($jour);
+
+        if ($data !== null) {
+            $data['is_new'] = true;
+            return $data;
+        }
+
+        // Synthèse absente : charger le dernier jour connu avant $jour
+        $jourEscaped = $this->escape($jour);
+        $prevQ = "SELECT d.jour,
+                         IFNULL(d.cumul_kg,    0) AS cumul_kg,
+                         IFNULL(d.cumul_kwh,   0) AS cumul_kwh,
+                         IFNULL(d.cumul_cycle, 0) AS cumul_cycle,
+                         d.prix_kg, d.prix_kwh, d.tc_ext_max, d.tc_ext_min,
+                         (SELECT ROUND(SUM(h.conso_kg * h.prix_kg), 2)
+                          FROM oko_resume_day h
+                          WHERE h.jour <= d.jour) AS cumul_cout
+                  FROM oko_resume_day d
+                  WHERE d.jour < '{$jourEscaped}'
+                  ORDER BY d.jour DESC
+                  LIMIT 1";
+
+        $this->log->debug('HaRendu::getResumeDayWithFallback (prev) | ' . $prevQ);
+        $prevR = $this->query($prevQ);
+        $prev  = $prevR ? $prevR->fetch_object() : null;
+
+        return [
+            'date'         => $jour,
+            'dju'          => 0,
+            'conso_kg'     => 0,
+            'conso_ecs_kg' => 0,
+            'conso_kwh'    => 0,
+            'nb_cycle'     => 0,
+            'cumul_kg'     => $prev ? (float) $prev->cumul_kg    : 0,
+            'cumul_kwh'    => $prev ? (float) $prev->cumul_kwh   : 0,
+            'cumul_cycle'  => $prev ? (int)   $prev->cumul_cycle : 0,
+            'cumul_cout'   => ($prev && $prev->cumul_cout !== null) ? (float) $prev->cumul_cout : 0,
+            'prix_kg'      => ($prev && $prev->prix_kg   !== null) ? (float) $prev->prix_kg    : null,
+            'prix_kwh'     => ($prev && $prev->prix_kwh  !== null) ? (float) $prev->prix_kwh   : null,
+            'tc_ext_max'   => ($prev && $prev->tc_ext_max !== null) ? (float) $prev->tc_ext_max : null,
+            'tc_ext_min'   => ($prev && $prev->tc_ext_min !== null) ? (float) $prev->tc_ext_min : null,
+            'is_new'       => false,
+        ];
+    }
+
     /* ── Données mensuelles ──────────────────────────────────────────────── */
 
     /**
@@ -426,9 +482,11 @@ $ha = new HaRendu();
 
 switch ($action) {
     /* ── today ──────────────────────────────────────────────────────────── */
+    // L'application ne connaît jamais les données du jour courant (import ~6h).
+    // "today" retourne donc la synthèse d'hier avec fallback si absent.
     case 'today':
-        $today   = date('Y-m-d');
-        $dayData = $ha->getLiveDayData($today);
+        $yesterday = date('Y-m-d', strtotime('-1 day'));
+        $dayData   = $ha->getResumeDayWithFallback($yesterday);
 
         echo json_encode(array_merge($dayData, [
             'silo'        => $ha->getSiloData(),
@@ -453,16 +511,21 @@ switch ($action) {
             exit;
         }
 
-        // Si c'est aujourd'hui, calcul live ; sinon résumé archivé
-        if ($date === date('Y-m-d')) {
-            $data = $ha->getLiveDayData($date);
+        $today     = date('Y-m-d');
+        $yesterday = date('Y-m-d', strtotime('-1 day'));
+
+        if ($date >= $yesterday) {
+            // Aujourd'hui ou hier : fallback si synthèse absente
+            $data = $ha->getResumeDayWithFallback($yesterday);
         } else {
+            // Jour passé : données archivées uniquement
             $data = $ha->getResumeDay($date);
             if ($data === null) {
                 http_response_code(404);
                 echo json_encode(['error' => 'No data found for ' . $date]);
                 exit;
             }
+            $data['is_new'] = true;
         }
 
         echo json_encode($data, JSON_NUMERIC_CHECK | JSON_PRETTY_PRINT);
