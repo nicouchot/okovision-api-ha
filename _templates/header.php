@@ -17,6 +17,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <title>OkoVision</title>
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
     <script type="text/javascript">
             var sessionToken = "<?php echo session::getInstance()->getVar('sid'); ?>";		
    </script>
