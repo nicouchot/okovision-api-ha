@@ -280,12 +280,33 @@ class HaRendu extends rendu
      */
     public function getMonthData(int $month, int $year): array
     {
-        $q = "SELECT jour, dju, conso_kg, conso_ecs_kg, conso_kwh,
-                     cumul_kg, cumul_kwh, cumul_cycle, prix_kg, prix_kwh,
-                     nb_cycle, tc_ext_max, tc_ext_min
-              FROM oko_resume_day
-              WHERE MONTH(jour) = {$month} AND YEAR(jour) = {$year}
-              ORDER BY jour ASC";
+        $eventType   = HAS_SILO ? 'PELLET' : 'BAG';
+        $siloSize    = HAS_SILO && SILO_SIZE ? (float) SILO_SIZE : 0;
+        $ashtraySize = ASHTRAY !== '' ? (float) ASHTRAY : 0;
+
+        /* Sous-requêtes corrélées pour silo et cendrier au jour J :
+         * - silo    : dernière livraison <= J → (qty+remaining) − conso depuis cette livraison
+         * - cendrier: dernier vidage     <= J → ASHTRAY − conso depuis ce vidage            */
+        $q = "SELECT d.jour, d.dju, d.conso_kg, d.conso_ecs_kg, d.conso_kwh,
+                     d.cumul_kg, d.cumul_kwh, d.cumul_cycle, d.prix_kg, d.prix_kwh,
+                     d.nb_cycle, d.tc_ext_max, d.tc_ext_min,
+                     (SELECT GREATEST(0, ROUND(
+                              (e.quantity + e.remaining) -
+                              IFNULL((SELECT SUM(r2.conso_kg) FROM oko_resume_day r2
+                                      WHERE r2.jour > e.event_date AND r2.jour <= d.jour), 0)))
+                      FROM oko_silo_events e
+                      WHERE e.event_type = '{$eventType}' AND e.event_date <= d.jour
+                      ORDER BY e.event_date DESC LIMIT 1) AS silo_restants_kg,
+                     (SELECT GREATEST(0, ROUND(
+                              {$ashtraySize} -
+                              IFNULL((SELECT SUM(r2.conso_kg) FROM oko_resume_day r2
+                                      WHERE r2.jour > e.event_date AND r2.jour <= d.jour), 0), 2))
+                      FROM oko_silo_events e
+                      WHERE e.event_type = 'ASHES' AND e.event_date <= d.jour
+                      ORDER BY e.event_date DESC LIMIT 1) AS cendrier_restant_kg
+              FROM oko_resume_day d
+              WHERE MONTH(d.jour) = {$month} AND YEAR(d.jour) = {$year}
+              ORDER BY d.jour ASC";
 
         $this->log->debug('HaRendu::getMonthData | ' . $q);
         $result = $this->query($q);
@@ -303,20 +324,31 @@ class HaRendu extends rendu
             $tcMax = isset($r->tc_ext_max) ? (float) $r->tc_ext_max : null;
             $tcMin = isset($r->tc_ext_min) ? (float) $r->tc_ext_min : null;
 
+            $siloRestant  = isset($r->silo_restants_kg)   ? (float) $r->silo_restants_kg   : null;
+            $cendRestant  = isset($r->cendrier_restant_kg) ? (float) $r->cendrier_restant_kg : null;
+            $siloNiveau   = ($siloRestant !== null && $siloSize > 0)
+                ? min(100, (int) round(100 * $siloRestant / $siloSize)) : null;
+            $cendNiveau   = ($cendRestant !== null && $ashtraySize > 0)
+                ? min(100, (int) round(100 * ($ashtraySize - $cendRestant) / $ashtraySize)) : null;
+
             $days[] = [
-                'date'         => $r->jour,
-                'dju'          => isset($r->dju)          ? (float) $r->dju          : null,
-                'conso_kg'     => isset($r->conso_kg)     ? (float) $r->conso_kg     : null,
-                'conso_ecs_kg' => isset($r->conso_ecs_kg) ? (float) $r->conso_ecs_kg : null,
-                'conso_kwh'    => isset($r->conso_kwh)    ? (float) $r->conso_kwh    : null,
-                'cumul_kg'     => isset($r->cumul_kg)     ? (float) $r->cumul_kg     : null,
-                'cumul_kwh'    => isset($r->cumul_kwh)    ? (float) $r->cumul_kwh    : null,
-                'cumul_cycle'  => isset($r->cumul_cycle)  ? (int)   $r->cumul_cycle  : null,
-                'prix_kg'      => isset($r->prix_kg)      ? (float) $r->prix_kg      : null,
-                'prix_kwh'     => isset($r->prix_kwh)     ? (float) $r->prix_kwh     : null,
-                'nb_cycle'     => isset($r->nb_cycle)     ? (int)   $r->nb_cycle     : null,
-                'tc_ext_max'   => $tcMax,
-                'tc_ext_min'   => $tcMin,
+                'date'                          => $r->jour,
+                'dju'                           => isset($r->dju)          ? (float) $r->dju          : null,
+                'conso_kg'                      => isset($r->conso_kg)     ? (float) $r->conso_kg     : null,
+                'conso_ecs_kg'                  => isset($r->conso_ecs_kg) ? (float) $r->conso_ecs_kg : null,
+                'conso_kwh'                     => isset($r->conso_kwh)    ? (float) $r->conso_kwh    : null,
+                'cumul_kg'                      => isset($r->cumul_kg)     ? (float) $r->cumul_kg     : null,
+                'cumul_kwh'                     => isset($r->cumul_kwh)    ? (float) $r->cumul_kwh    : null,
+                'cumul_cycle'                   => isset($r->cumul_cycle)  ? (int)   $r->cumul_cycle  : null,
+                'prix_kg'                       => isset($r->prix_kg)      ? (float) $r->prix_kg      : null,
+                'prix_kwh'                      => isset($r->prix_kwh)     ? (float) $r->prix_kwh     : null,
+                'nb_cycle'                      => isset($r->nb_cycle)     ? (int)   $r->nb_cycle     : null,
+                'tc_ext_max'                    => $tcMax,
+                'tc_ext_min'                    => $tcMin,
+                'silo_pellets_restants'         => $siloRestant,
+                'silo_niveau'                   => $siloNiveau,
+                'cendrier_capacite_restante'    => $cendRestant,
+                'cendrier_niveau_de_remplissage'=> $cendNiveau,
             ];
 
             $totalDju    += isset($r->dju)          ? (float) $r->dju          : 0;

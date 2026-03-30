@@ -115,15 +115,34 @@ Données live du jour en cours calculées depuis `oko_historique_full`, complét
 
 ### `?action=daily&date=YYYY-MM-DD`
 
-Résumé d'un jour précis. Utilise les données live (même structure que `today`) si la date est aujourd'hui, sinon lit `oko_resume_day` (synthèse archivée).
+Résumé d'un jour précis. Retourne la synthèse archivée depuis `oko_resume_day`.
 
-Retourne les mêmes champs que `today` (sans `silo`, `ashtray`, `maintenance`), plus `cumul_cout` calculé comme `SUM(conso_kg × prix_kg)` jusqu'à ce jour inclus.
+- `date` = aujourd'hui ou hier → retourne la synthèse d'hier avec fallback si absente (`is_new: false`)
+- `date` < hier → données archivées (`is_new: true`) ou `404` si absent
 
-Retourne `404` si aucune donnée n'existe pour la date demandée.
+| Champ | Type | Description |
+|---|---|---|
+| `date` | string | Date `YYYY-MM-DD` |
+| `dju` | float\|null | Degrés-Jours Unifiés |
+| `conso_kg` | float\|null | Consommation pellet du jour (kg) |
+| `conso_ecs_kg` | float\|null | Dont eau chaude sanitaire (kg) |
+| `conso_kwh` | float\|null | Énergie produite (kWh) |
+| `nb_cycle` | int\|null | Nombre de cycles brûleur |
+| `cumul_kg` | float\|null | Cumul pellet depuis le début (kg) |
+| `cumul_kwh` | float\|null | Cumul énergie depuis le début (kWh) |
+| `cumul_cycle` | int\|null | Cumul cycles depuis le début |
+| `cumul_cout` | float\|null | Coût cumulé depuis le début (€) |
+| `prix_kg` | float\|null | Prix au kg FIFO (€/kg) |
+| `prix_kwh` | float\|null | Prix au kWh (€/kWh) |
+| `tc_ext_max` | float\|null | T° extérieure max (°C) |
+| `tc_ext_min` | float\|null | T° extérieure min (°C) |
+| `is_new` | bool | `true` si synthèse présente, `false` si fallback (données d'avant-hier) |
 
 ### `?action=monthly&month=MM&year=YYYY`
 
-Tableau journalier complet d'un mois + totaux mensuels.
+Tableau journalier complet d'un mois depuis `oko_resume_day` + totaux mensuels. Si `month`/`year` sont absents, utilise le mois/année courant.
+
+**Structure de la réponse :**
 
 ```json
 {
@@ -138,9 +157,35 @@ Tableau journalier complet d'un mois + totaux mensuels.
     "tc_ext_max": float|null,
     "tc_ext_min": float|null
   },
-  "days": [ { /* mêmes champs que daily */ } ]
+  "days": [ { /* voir tableau ci-dessous */ } ]
 }
 ```
+
+**Champs de chaque jour dans `days[]` :**
+
+| Champ | Type | Description |
+|---|---|---|
+| `date` | string | Date `YYYY-MM-DD` |
+| `dju` | float\|null | Degrés-Jours Unifiés |
+| `conso_kg` | float\|null | Consommation pellet du jour (kg) |
+| `conso_ecs_kg` | float\|null | Dont eau chaude sanitaire (kg) |
+| `conso_kwh` | float\|null | Énergie produite (kWh) |
+| `nb_cycle` | int\|null | Nombre de cycles brûleur |
+| `cumul_kg` | float\|null | Cumul pellet depuis le début (kg) |
+| `cumul_kwh` | float\|null | Cumul énergie depuis le début (kWh) |
+| `cumul_cycle` | int\|null | Cumul cycles depuis le début |
+| `prix_kg` | float\|null | Prix au kg FIFO (€/kg) |
+| `prix_kwh` | float\|null | Prix au kWh (€/kWh) |
+| `tc_ext_max` | float\|null | T° extérieure max (°C) |
+| `tc_ext_min` | float\|null | T° extérieure min (°C) |
+| `silo_pellets_restants` | float\|null | Stock pellet restant estimé au soir de ce jour (kg) |
+| `silo_niveau` | int\|null | Niveau silo en % au soir de ce jour |
+| `cendrier_capacite_restante` | float\|null | Capacité cendrier restante avant vidange (kg) |
+| `cendrier_niveau_de_remplissage` | int\|null | Taux de remplissage du cendrier en % |
+
+> Les valeurs silo et cendrier sont calculées à la volée : stock à la livraison − consommation cumulée depuis cette livraison jusqu'au jour J. `null` si aucun événement de livraison/vidage antérieur n'est enregistré.
+
+**Totaux mensuels (`totals`) :** sommes de `dju`, `conso_kg`, `conso_ecs_kg`, `conso_kwh`, `nb_cycle` ; max de `tc_ext_max` ; min de `tc_ext_min` sur le mois.
 
 ### `?action=status`
 

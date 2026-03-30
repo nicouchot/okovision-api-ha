@@ -1,6 +1,44 @@
 Unrealised
 ----------
 
+v0.49.0 (2026-03-30)
+--------------------
+* API HA monthly : ajout de silo_pellets_restants, silo_niveau,
+  cendrier_capacite_restante, cendrier_niveau_de_remplissage pour chaque
+  jour dans le tableau days[]. Valeurs calculées historiquement via
+  sous-requêtes corrélées (stock à la livraison − conso cumulée jusqu'au jour J).
+* API HA : documentation complète de la requête monthly dans api-doc.md.
+
+v0.48.0 (2026-03-29)
+--------------------
+* API HA daily/today : nouveau champ is_new (true = synthèse présente,
+  false = fallback avec cumulatifs d'avant-hier quand la synthèse n'est
+  pas encore calculée).
+* API HA today : retourne désormais la synthèse d'hier au lieu d'un
+  calcul live (l'app ne connaît jamais les données du jour en cours).
+
+v0.47.0 (2026-03-29)
+--------------------
+* Compatibilité firmware V4 : nouvelle page temps réel (rt_v4.php,
+  js/rt_v4.js) et scripts backend (_include/bin_v4/).
+* Import CSV par boite mail IMAP (amImpMail.php, js/amImpMail.js, cron2.php).
+* Menu : ajout route import mail, restructuration pour firmware V4.
+* Langues : nouvelles clés pour l'import mail, l'ECS temps réel,
+  les capteurs firmware V4.
+* favicon : ajout <link rel="icon"> explicite dans header.php pour
+  fonctionner en installation sous-dossier.
+
+v0.46.0 (2026-03-27)
+--------------------
+* Calcul du prix pellet par logique FIFO (cumul consommé vs cumul livré) :
+  le prix d'un lot ne s'applique que lorsque le lot précédent est épuisé.
+  Impacte insertSyntheseDay, recalcHistorique et toutes les requêtes de coût.
+* Histo : affichage du coût cumulé du mois et de la saison, colonne
+  Coût (€) dans le tableau de synthèse.
+* API HA : nouveau champ cumul_cout dans les actions today et daily.
+* config_sample.php : détection multi-candidats du répertoire app pour
+  compatibilité Synology vhost par défaut (open_basedir).
+
 2.00.b
 ------
 * Make Okovision compatible with firmware V4.
