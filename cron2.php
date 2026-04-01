@@ -37,8 +37,6 @@ foreach ($mailArray as $nb_mail => $titre_mail){
 	$nb_mail_last = $nb_mail;
 }
 
-var_dump($nb_mail_last);
-
 $_GET['list'] = $nb_mail_last;
 
 
@@ -96,8 +94,6 @@ foreach ($files as $fileToDownload) {
 
 
 
-$s['url'] = "http://192.168.86.28:4321/r18n/log3";
-$adm->importFileFromChaudiere($s);
 
 
 

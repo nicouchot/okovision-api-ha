@@ -1,6 +1,21 @@
 Unrealised
 ----------
 
+v0.50.0 (2026-04-01)
+--------------------
+* cron.php : réécriture complète — import 3 niveaux pour firmware V4 :
+  1. Étape 1 (temps réel) : téléchargement log0 (aujourd'hui) à chaque appel du cron via
+     l'API V4 JSON (http://CHAUDIERE:PORT/PASSWORD/log0), import et calcul synthèse.
+  2. Étape 2 (vérification veille, à partir de 00h01) : si la journée d'hier est incomplète
+     en base, téléchargement log1 (hier), import et recalcul synthèse veille.
+  3. Étape 3 (fallback mail) : si la veille est toujours incomplète après l'étape 2,
+     déclenchement du pipeline mail (get_list_mail → download_csv → importFileFromTmp).
+* Fix : suppression de print_r($dataFilename) dans okofen.class.php::getDateFromFilename().
+* Fix : suppression de var_dump($nb_mail_last) dans cron2.php.
+* Fix : suppression de l'URL hardcodée 192.168.86.28:4321/r18n/log3 dans cron2.php.
+* Fix : remplacement de l'IP hardcodée 192.168.1.2:4321/Ob9v dans
+  administration.class.php::getFileFromChaudiere() par les constantes CHAUDIERE/PORT_JSON/PASSWORD_JSON.
+
 v0.49.0 (2026-03-30)
 --------------------
 * API HA monthly : ajout de silo_pellets_restants, silo_niveau,

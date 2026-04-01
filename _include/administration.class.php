@@ -272,7 +272,7 @@ class administration extends connectDb
 		
 		ini_set('auto_detect_line_endings',TRUE);
 	
-		$ch = curl_init('http://192.168.1.2:4321/Ob9v/log0');
+		$ch = curl_init('http://'.CHAUDIERE.':'.PORT_JSON.'/'.PASSWORD_JSON.'/log0');
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 		$csv = utf8_encode(curl_exec($ch));
 		

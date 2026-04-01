@@ -79,7 +79,6 @@ class okofen extends connectDb
      */
     public function getDateFromFilename($dataFilename)
     {
-	    print_r($dataFilename);
         $matches = [];
         if (preg_match('@touch_([0-9]{4})([0-9]{2})([0-9]{2})\.csv@', $dataFilename, $matches)) {
             $year = $matches[1];
