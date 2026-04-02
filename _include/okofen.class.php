@@ -254,24 +254,42 @@ class okofen extends connectDb
 
     //fonction de telechargement de fichier sur internet
     // download('http://xxx','/usr/var/tmp)');
+    // Utilise cURL avec 3 tentatives espacées de 3s pour absorber
+    // le rate-limit de l'API V4 (HTTP 401 si < 2500ms entre requêtes).
     private function download($file_source, $file_target)
     {
-        $rh = fopen($file_source, 'rb');
-        $wh = fopen($file_target, 'w+b');
-        if (!$rh || !$wh) {
-            return false;
-        }
+        $maxAttempts = 3;
+        $retryDelay  = 3; // secondes
 
-        while (!feof($rh)) {
-            if (false === fwrite($wh, fread($rh, 4096))) {
+        for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+            $ch = curl_init($file_source);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 20);
+            $body    = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curlErr  = curl_error($ch);
+            curl_close($ch);
+
+            if ($curlErr || $httpCode !== 200 || $body === false) {
+                if ($attempt < $maxAttempts) {
+                    sleep($retryDelay);
+                    continue;
+                }
                 return false;
             }
+
+            $wh = fopen($file_target, 'w+b');
+            if (!$wh) {
+                return false;
+            }
+            fwrite($wh, $body);
+            fclose($wh);
+
+            return true;
         }
 
-        fclose($rh);
-        fclose($wh);
-
-        return true;
+        return false;
     }
 
     //function de convertion du format decimal de l'import au format bdd
