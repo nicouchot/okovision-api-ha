@@ -21,11 +21,13 @@ $minute    = (int) date('i');
 // On importe toutes les lignes en base puis on recalcule les synthèses
 // pour hier ET pour aujourd'hui.
 $urlLog0 = 'http://'.CHAUDIERE.':'.PORT_JSON.'/'.PASSWORD_JSON.'/log0';
+$yesterdaySyntheseDone = false;
 $log->info("Cron | Téléchargement log0");
 if ($oko->getChaudiereData($urlLog0)) {
     $oko->csv2bdd();
     $oko->makeSyntheseByDay($yesterday, true);
     $oko->makeSyntheseByDay($today, true);
+    $yesterdaySyntheseDone = true;
     $log->info("Cron | log0 importé — synthèses {$yesterday} et {$today} recalculées");
 } else {
     $log->info("Cron | log0 indisponible");
@@ -36,7 +38,7 @@ if ($oko->getChaudiereData($urlLog0)) {
 // journée courante. On complète avec un snapshot /all? qui insère une ligne
 // par appel du cron dans oko_historique_full pour aujourd'hui.
 // Le INSERT IGNORE dans csv2bdd() garantit l'idempotence à la minute près.
-sleep(5); // respecte le rate-limit de l'API (2500ms entre requêtes)
+sleep(2); // respecte le rate-limit de l'API (2500ms entre requêtes)
 if ($oko->storeLiveSnapshot()) {
     $oko->csv2bdd();
     $log->info("Cron | Snapshot live importé pour {$today}");
@@ -54,7 +56,7 @@ if ($oko->storeLiveSnapshot()) {
 if ($hour > 0 || ($hour === 0 && $minute >= 1)) {
     if (!$oko->isDayComplete($yesterday)) {
         $log->info("Cron | Veille incomplète — nouvelle tentative log0 ({$yesterday})");
-        sleep(5); // rate-limit API
+        sleep(2); // rate-limit API
         if ($oko->getChaudiereData($urlLog0)) {
             $oko->csv2bdd();
             $oko->makeSyntheseByDay($yesterday, true);
@@ -62,7 +64,8 @@ if ($hour > 0 || ($hour === 0 && $minute >= 1)) {
         } else {
             $log->info("Cron | log0 indisponible — nouvelle tentative au prochain appel");
         }
-    } else {
+    } elseif (!$yesterdaySyntheseDone) {
+        // synthèse uniquement si pas déjà calculée à l'étape 1
         $log->info("Cron | Veille complète ({$yesterday})");
         $oko->makeSyntheseByDay($yesterday, false);
     }

@@ -107,10 +107,18 @@ class okofen extends connectDb
         $file = fopen(CSVFILE, 'r');
         $ln = 0;
         $old_status = 0;
-        $start_cycle = 0;
         $nbColCsv = count($capteurs);
 
-        $insert = 'INSERT IGNORE INTO oko_historique_full SET ';
+        // Build column list once — fixed order: jour, heure, timestamp, col_startCycle, then sensor cols
+        $startCycleCol = 'col_'.$startCycle['column_oko'];
+        $colNames = ['jour', 'heure', 'timestamp', $startCycleCol];
+        for ($i = 2; $i <= $nbColCsv; ++$i) {
+            $colNames[] = 'col_'.$capteurs[$i]['column_oko'];
+        }
+        $columnList = implode(', ', $colNames);
+
+        $valueRows = [];
+
         while (!feof($file)) {
             $ligne = fgets($file);
             //ne pas prendre en compte la derniere colonne vide
@@ -128,38 +136,33 @@ class okofen extends connectDb
                     // Case of an import on the same day of the web files and the USB files
                     $heure = preg_replace('/:[0-9]{2}$/', ':00', $heure);
 
-                    $query = '';
-
-                    $beginValue = "jour = STR_TO_DATE('".$jour."','%d.%m.%Y'),".		// jour
-                                    "heure = '".$heure."',".// heure
-                                    "timestamp = UNIX_TIMESTAMP(CONCAT(STR_TO_DATE('".$jour."','%d.%m.%Y'),' ','".$heure."'))"; //utc timestamp
-
-                    $query = $insert.$beginValue;
                     //Detection demarrage d'un cycle //Statut 4 = Debut d'un cycle sur le front montant du statut
-                    if ('4' == $colCsv[$capteurStatus['position_column_csv']] && $colCsv[$capteurStatus['position_column_csv']] != $old_status) {
-                        $st = 1;
-                        //creation de la requette pour le comptage des cycle de la chaudiere
-                        //Enregistrement de 1 si nous commençons un cycle d'allumage
-                        $query .= ', col_'.$startCycle['column_oko'].'='.$st;
-                    }
+                    //Enregistrement de 1 si nous commençons un cycle d'allumage, NULL sinon
+                    $stVal = ('4' == $colCsv[$capteurStatus['position_column_csv']] && $colCsv[$capteurStatus['position_column_csv']] != $old_status)
+                        ? '1' : 'NULL';
 
-                    //creation de la requette sql pour les capteurs
+                    $row = "(STR_TO_DATE('".$jour."','%d.%m.%Y'), '".$heure."', UNIX_TIMESTAMP(CONCAT(STR_TO_DATE('".$jour."','%d.%m.%Y'),' ','".$heure."')), ".$stVal;
+
+                    //creation des valeurs pour les capteurs
                     //on commence à la deuxieme colonne de la ligne du csv
                     for ($i = 2; $i <= $nbColCsv; ++$i) {
-                        $query .= ', col_'.$capteurs[$i]['column_oko'].'='.$this->cvtDec($colCsv[$i]);
+                        $row .= ', '.$this->cvtDec($colCsv[$i]);
                     }
+                    $row .= ')';
+                    $valueRows[] = $row;
 
-                    $query .= ';';
-                    //execution de la requette representant l'ensemble d'un ligne du csv
-                    $this->log->debug('Class '.__CLASS__.' | '.__FUNCTION__.' | '.$query);
-
-                    $this->query($query);
                     $old_status = $colCsv[$capteurStatus['position_column_csv']];
                 }
             }
             ++$ln;
         }
         fclose($file);
+
+        if (!empty($valueRows)) {
+            $sql = 'INSERT IGNORE INTO oko_historique_full ('.$columnList.') VALUES '.implode(', ', $valueRows);
+            $this->log->debug('Class '.__CLASS__.' | '.__FUNCTION__.' | batch INSERT '.(count($valueRows)).' lignes');
+            $this->query($sql);
+        }
 
         $this->log->info('Class '.__CLASS__.' | '.__FUNCTION__.' | SUCCESS - import du CSV dans la BDD - '.$ln.' lignes en '.$t->getTime().' sec ');
 

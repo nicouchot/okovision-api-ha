@@ -1,6 +1,16 @@
 Unrealised
 ----------
 
+v0.52.0 (2026-04-02)
+--------------------
+* okofen.class.php : csv2bdd() réécrit en batch INSERT — toutes les lignes du CSV
+  sont regroupées en une seule requête INSERT IGNORE multi-valeurs au lieu de N requêtes
+  individuelles (1440 → 1 requête pour un log0 complet de 24h).
+* cron.php : sleep(5) réduit à sleep(2) entre l'étape 1 et l'étape 1b — le rate-limit
+  API est 2500ms, 5s était excessif.
+* cron.php : évitement du double calcul de synthèse pour la veille — si la synthèse
+  a déjà été calculée à l'étape 1, l'étape 2 (cas veille déjà complète) ne la recalcule pas.
+
 v0.51.0 (2026-04-02)
 --------------------
 * cron.php : ajout de l'étape 1b — snapshot temps réel de la journée courante.
