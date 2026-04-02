@@ -1,6 +1,19 @@
 Unrealised
 ----------
 
+v0.51.0 (2026-04-02)
+--------------------
+* cron.php : ajout de l'étape 1b — snapshot temps réel de la journée courante.
+  À chaque appel du cron, l'endpoint /all? de l'API V4 est interrogé et une ligne
+  synthétique est insérée dans oko_historique_full pour l'heure courante (résolution 5min).
+  Cela alimente les graphiques et indicateurs de la journée en cours sur index.php,
+  car log0 n'est écrit qu'une seule fois à minuit par la chaudière.
+* okofen.class.php : nouvelle méthode storeLiveSnapshot() — récupère /all?, mappe les
+  valeurs JSON sur les colonnes CSV (matrice.csv), écrit une ligne dans _tmp/import.csv,
+  avec retry ×3 (4s) et encodage utf8_encode() pour compatibilité ISO-8859-1 du firmware.
+* okofen.class.php : fix download() — remplacement fopen par cURL avec retry ×3 et
+  vérification du code HTTP (corrige les erreurs 401 du rate-limit de l'API V4).
+
 v0.50.0 (2026-04-01)
 --------------------
 * cron.php : réécriture complète — import 3 niveaux pour firmware V4 :

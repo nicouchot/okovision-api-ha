@@ -31,6 +31,19 @@ if ($oko->getChaudiereData($urlLog0)) {
     $log->info("Cron | log0 indisponible");
 }
 
+// ── ÉTAPE 1b : snapshot temps réel — /all? → aujourd'hui ─────────────────
+// log0 est écrit une fois à minuit : il ne contient pas les données de la
+// journée courante. On complète avec un snapshot /all? qui insère une ligne
+// par appel du cron dans oko_historique_full pour aujourd'hui.
+// Le INSERT IGNORE dans csv2bdd() garantit l'idempotence à la minute près.
+sleep(5); // respecte le rate-limit de l'API (2500ms entre requêtes)
+if ($oko->storeLiveSnapshot()) {
+    $oko->csv2bdd();
+    $log->info("Cron | Snapshot live importé pour {$today}");
+} else {
+    $log->info("Cron | Snapshot live indisponible");
+}
+
 // ── ÉTAPE 2 : vérification veille à partir de 00h01 ───────────────────────
 if ($hour > 0 || ($hour === 0 && $minute >= 1)) {
     if (!$oko->isDayComplete($yesterday)) {
