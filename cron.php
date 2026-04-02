@@ -16,13 +16,17 @@ $yesterday = date('Y-m-d', strtotime('-1 day'));
 $hour      = (int) date('H');
 $minute    = (int) date('i');
 
-// ── ÉTAPE 1 : import temps réel — log0 = aujourd'hui ──────────────────────
+// ── ÉTAPE 1 : import temps réel — log0 = fenêtre glissante 24h ───────────
+// log0 contient les dernières 24h : typiquement hier + début d'aujourd'hui.
+// On importe toutes les lignes en base puis on recalcule les synthèses
+// pour hier ET pour aujourd'hui.
 $urlLog0 = 'http://'.CHAUDIERE.':'.PORT_JSON.'/'.PASSWORD_JSON.'/log0';
-$log->info("Cron | Téléchargement log0 ({$today})");
+$log->info("Cron | Téléchargement log0");
 if ($oko->getChaudiereData($urlLog0)) {
     $oko->csv2bdd();
+    $oko->makeSyntheseByDay($yesterday, true);
     $oko->makeSyntheseByDay($today, true);
-    $log->info("Cron | log0 importé");
+    $log->info("Cron | log0 importé — synthèses {$yesterday} et {$today} recalculées");
 } else {
     $log->info("Cron | log0 indisponible");
 }
