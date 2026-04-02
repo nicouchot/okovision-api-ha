@@ -1,6 +1,16 @@
 Unrealised
 ----------
 
+v0.53.0 (2026-04-02)
+--------------------
+* ha_api.php : nouvel endpoint action=live — retourne le dernier snapshot
+  temps-réel stocké en base (dernière ligne de oko_historique_full).
+  Données exposées : températures (ext, chaudière, départ, ambiance, FRT, UW),
+  combustion (modulation, ventilateur, tirage, vis, pause), circuit (pompe, état),
+  pellets (niveau silo, ZWB), boiler_running (bool), boiler_state (code PE1).
+  Résolution des colonnes dynamique via capteur::getForImportCsv() → compatible
+  toutes installations. Retourne 404 si aucune donnée en base.
+
 v0.52.0 (2026-04-02)
 --------------------
 * okofen.class.php : csv2bdd() réécrit en batch INSERT — toutes les lignes du CSV

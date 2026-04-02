@@ -18,6 +18,11 @@
  *
  *   ?token=XXXX&action=status
  *       → Niveau silo + cendrier uniquement
+ *
+ *   ?token=XXXX&action=live
+ *       → Dernier snapshot temps-réel stocké en base (dernière ligne de
+ *         oko_historique_full, quelle que soit sa date).
+ *         Mise à jour à chaque appel de cron.php (fréquence : 1 min).
  */
 
 include_once 'config.php';
@@ -489,6 +494,142 @@ class HaRendu extends rendu
         ];
     }
 
+    /* ── Snapshot temps-réel (dernière ligne de oko_historique_full) ───────── */
+
+    /**
+     * Retourne le dernier snapshot stocké en base, quelle que soit sa date.
+     * Les colonnes sont résolues dynamiquement via capteur::getForImportCsv()
+     * pour être indépendant de la configuration de l'installation.
+     *
+     * Positions CSV utilisées (cf. storeLiveSnapshot / matrice.csv) :
+     *   2=AT  4=PE1_BR1  5=HK1_VL_Ist  6=HK1_VL_Soll  7=HK1_RT_Ist
+     *   8=HK1_RT_Soll  9=HK1_Pompe  12=HK1_Status  13=PE1_KT  14=PE1_KT_SOLL
+     *   15=UW_Freigabe  16=Modulation  17=FRT_Ist  18=FRT_Soll  19=FRT_End
+     *   20=Einschublaufzeit  21=Pausenzeit  22=Luefterdrehzahl  23=Saugzugdrehzahl
+     *   24=Unterdruck_Ist  25=Unterdruck_Soll  26=Fuellstand  27=Fuellstand_ZWB
+     *   28=PE1_Status  43=PE1_AK
+     *
+     * @return array|null  null si aucune donnée en base
+     */
+    public function getLiveSnapshot(): ?array
+    {
+        $ob_capteur = new capteur();
+        $capteurs   = $ob_capteur->getForImportCsv(); // indexé par position CSV
+        unset($ob_capteur);
+
+        // Résolution dynamique : position CSV → nom de colonne DB (col_X)
+        $col = function (int $csvPos) use ($capteurs): ?string {
+            return isset($capteurs[$csvPos]) ? 'col_'.$capteurs[$csvPos]['column_oko'] : null;
+        };
+
+        // Correspondance alias → position CSV (d'après matrice.csv / storeLiveSnapshot)
+        $posMap = [
+            'outdoor'        => 2,   // AT [°C]
+            'pe1_br'         => 4,   // PE1 BR1 — allumage (bool)
+            'flow_act'       => 5,   // HK1 VL Ist [°C]
+            'flow_set'       => 6,   // HK1 VL Soll [°C]
+            'room_act'       => 7,   // HK1 RT Ist [°C]
+            'room_set'       => 8,   // HK1 RT Soll [°C]
+            'pump_on'        => 9,   // HK1 Pompe (bool)
+            'circuit_state'  => 12,  // HK1 Status
+            'boiler_act'     => 13,  // PE1 KT [°C]
+            'boiler_set'     => 14,  // PE1 KT_SOLL [°C]
+            'uw_release'     => 15,  // PE1 UW Freigabe [°C]
+            'modulation'     => 16,  // PE1 Modulation [%]
+            'frt_act'        => 17,  // PE1 FRT Ist [°C]
+            'frt_set'        => 18,  // PE1 FRT Soll [°C]
+            'frt_end'        => 19,  // PE1 FRT End [°C]
+            'feed_time'      => 20,  // PE1 Einschublaufzeit [s]
+            'pause_time'     => 21,  // PE1 Pausenzeit [s]
+            'fan_speed'      => 22,  // PE1 Luefterdrehzahl [%]
+            'flue_speed'     => 23,  // PE1 Saugzugdrehzahl [%]
+            'draft_act'      => 24,  // PE1 Unterdruck Ist [EH]
+            'draft_set'      => 25,  // PE1 Unterdruck Soll [EH]
+            'storage_fill'   => 26,  // PE1 Fuellstand [kg]
+            'storage_popper' => 27,  // PE1 Fuellstand ZWB [kg]
+            'pe1_state'      => 28,  // PE1 Status (code brut)
+            'pe1_ak'         => 43,  // PE1 AK
+        ];
+
+        // Construction du SELECT dynamique
+        $selectParts = ['jour', 'heure', 'timestamp'];
+        foreach ($posMap as $alias => $csvPos) {
+            $colName = $col($csvPos);
+            if ($colName !== null) {
+                $selectParts[] = $colName.' AS '.$alias;
+            }
+        }
+
+        $q = 'SELECT '.implode(', ', $selectParts).'
+              FROM oko_historique_full
+              ORDER BY timestamp DESC
+              LIMIT 1';
+
+        $this->log->debug('HaRendu::getLiveSnapshot | '.$q);
+        $result = $this->query($q);
+        if (!$result) {
+            return null;
+        }
+        $r = $result->fetch_object();
+        if (!$r) {
+            return null;
+        }
+
+        // Timestamp ISO 8601 (avec fuseau horaire serveur)
+        $isoTs = null;
+        if (!empty($r->timestamp)) {
+            $dt = new \DateTime('@'.(int) $r->timestamp);
+            $dt->setTimezone(new \DateTimeZone(date_default_timezone_get()));
+            $isoTs = $dt->format(\DateTime::ATOM);
+        }
+
+        $fv = function ($prop) use ($r): ?float {
+            return isset($r->{$prop}) ? (float) $r->{$prop} : null;
+        };
+        $iv = function ($prop) use ($r): ?int {
+            return isset($r->{$prop}) ? (int) $r->{$prop} : null;
+        };
+
+        return [
+            'timestamp'      => $isoTs,
+            'boiler_running' => isset($r->pe1_br)    ? ((int) $r->pe1_br !== 0)    : null,
+            'boiler_state'   => $iv('pe1_state'),
+            'temperatures'   => [
+                'outdoor'       => $fv('outdoor'),
+                'boiler_actual' => $fv('boiler_act'),
+                'boiler_target' => $fv('boiler_set'),
+                'flow_actual'   => $fv('flow_act'),
+                'flow_target'   => $fv('flow_set'),
+                'room_actual'   => $fv('room_act'),
+                'room_target'   => $fv('room_set'),
+                'frt_actual'    => $fv('frt_act'),
+                'frt_target'    => $fv('frt_set'),
+                'frt_end'       => $fv('frt_end'),
+                'uw_release'    => $fv('uw_release'),
+            ],
+            'combustion'     => [
+                'modulation'            => $iv('modulation'),
+                'fan_speed'             => $iv('fan_speed'),
+                'flue_draft_speed'      => $iv('flue_speed'),
+                'draft_pressure_actual' => $fv('draft_act'),
+                'draft_pressure_target' => $fv('draft_set'),
+                'feed_time'             => $fv('feed_time'),
+                'pause_time'            => $fv('pause_time'),
+            ],
+            'circuit'        => [
+                'pump_on' => isset($r->pump_on)      ? ((int) $r->pump_on !== 0)  : null,
+                'state'   => $iv('circuit_state'),
+            ],
+            'pellets'        => [
+                'storage_fill_kg'   => $iv('storage_fill'),
+                'storage_popper_kg' => $iv('storage_popper'),
+            ],
+            'status'         => [
+                'pe1_ak' => $iv('pe1_ak'),
+            ],
+        ];
+    }
+
     /* ── Escape helper ───────────────────────────────────────────────────── */
 
     private function escape(string $value): string
@@ -504,8 +645,8 @@ $action = isset($_GET['action']) ? trim($_GET['action']) : '';
 if (empty($action)) {
     http_response_code(400);
     echo json_encode([
-        'error'           => 'Missing action parameter',
-        'available_actions' => ['today', 'daily', 'monthly', 'status'],
+        'error'             => 'Missing action parameter',
+        'available_actions' => ['today', 'daily', 'monthly', 'status', 'live'],
     ]);
     exit;
 }
@@ -586,11 +727,22 @@ switch ($action) {
         ], JSON_NUMERIC_CHECK | JSON_PRETTY_PRINT);
         break;
 
+    /* ── live ───────────────────────────────────────────────────────────── */
+    case 'live':
+        $snapshot = $ha->getLiveSnapshot();
+        if ($snapshot === null) {
+            http_response_code(404);
+            echo json_encode(['error' => 'No live data available yet']);
+            exit;
+        }
+        echo json_encode($snapshot, JSON_NUMERIC_CHECK | JSON_PRETTY_PRINT);
+        break;
+
     default:
         http_response_code(400);
         echo json_encode([
-            'error'            => 'Unknown action: ' . $action,
-            'available_actions' => ['today', 'daily', 'monthly', 'status'],
+            'error'             => 'Unknown action: ' . $action,
+            'available_actions' => ['today', 'daily', 'monthly', 'status', 'live'],
         ]);
         break;
 }
