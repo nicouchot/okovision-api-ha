@@ -45,19 +45,25 @@ if ($oko->storeLiveSnapshot()) {
 }
 
 // ── ÉTAPE 2 : vérification veille à partir de 00h01 ───────────────────────
+// log0 = fichier complet de la veille écrit par la chaudière à minuit.
+// Si la veille est toujours incomplète après l'étape 1 (log0 pas encore
+// entièrement écrit, ou téléchargement raté), on retente log0 à chaque
+// appel du cron jusqu'à ce que isDayComplete(yesterday) soit vrai.
+// Note : INSERT IGNORE dans csv2bdd() garantit qu'un re-import est sans effet
+// sur les lignes déjà présentes — seuls les points manquants sont ajoutés.
 if ($hour > 0 || ($hour === 0 && $minute >= 1)) {
     if (!$oko->isDayComplete($yesterday)) {
-        $urlLog1 = 'http://'.CHAUDIERE.':'.PORT_JSON.'/'.PASSWORD_JSON.'/log1';
-        $log->info("Cron | Veille incomplète — téléchargement log1 ({$yesterday})");
-        if ($oko->getChaudiereData($urlLog1)) {
+        $log->info("Cron | Veille incomplète — nouvelle tentative log0 ({$yesterday})");
+        sleep(5); // rate-limit API
+        if ($oko->getChaudiereData($urlLog0)) {
             $oko->csv2bdd();
             $oko->makeSyntheseByDay($yesterday, true);
-            $log->info("Cron | log1 importé");
+            $log->info("Cron | log0 re-importé — veille complétée ({$yesterday})");
         } else {
-            $log->info("Cron | log1 indisponible");
+            $log->info("Cron | log0 indisponible — nouvelle tentative au prochain appel");
         }
     } else {
-        $log->info("Cron | Veille déjà complète ({$yesterday})");
+        $log->info("Cron | Veille complète ({$yesterday})");
         $oko->makeSyntheseByDay($yesterday, false);
     }
 }
