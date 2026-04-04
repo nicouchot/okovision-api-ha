@@ -1,3 +1,19 @@
+v0.53.1 (2026-04-04)
+--------------------
+* okofen.class.php : csv2bdd() — correction doublon `col_startCycle` dans le batch INSERT.
+  Si le capteur startCycle avait `position_column_csv != -1`, sa colonne DB apparaissait deux
+  fois dans la liste (une fois ajoutée explicitement, une fois via le loop), provoquant une
+  erreur MySQL "Column specified twice" et un import silencieusement vide.
+  Fix : le loop exclut désormais `col_startCycle` via un `continue` ; la valeur calculée
+  (front montant statut=4 → 1, sinon NULL) reste la seule source pour cette colonne.
+* okofen.class.php : csv2bdd() — le résultat du batch INSERT est maintenant vérifié.
+  Avant ce fix, un échec MySQL était ignoré et la fonction retournait toujours `true` en
+  loggant "SUCCESS". En cas d'échec, elle retourne désormais `false` et loggue une erreur.
+  Cela permet à isDayComplete() de retourner false et aux étapes 2/3 du cron de retenter.
+* cron.php (étape 3) : suppression du double appel csv2bdd() après importFileFromTmp().
+  importFileFromTmp() → importcsv() → csv2bdd() déjà en interne ; l'appel
+  supplémentaire à $oko->csv2bdd() était redondant.
+
 Unrealised
 ----------
 

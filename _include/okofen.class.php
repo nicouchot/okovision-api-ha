@@ -109,11 +109,17 @@ class okofen extends connectDb
         $old_status = 0;
         $nbColCsv = count($capteurs);
 
-        // Build column list once — fixed order: jour, heure, timestamp, col_startCycle, then sensor cols
+        // Build column list once — fixed order: jour, heure, timestamp, col_startCycle, then sensor cols.
+        // col_startCycle est calculé (détection front montant statut=4), pas lu directement dans le CSV.
+        // On l'exclut du loop pour éviter un doublon si position_column_csv != -1.
         $startCycleCol = 'col_'.$startCycle['column_oko'];
         $colNames = ['jour', 'heure', 'timestamp', $startCycleCol];
         for ($i = 2; $i <= $nbColCsv; ++$i) {
-            $colNames[] = 'col_'.$capteurs[$i]['column_oko'];
+            $col = 'col_'.$capteurs[$i]['column_oko'];
+            if ($col === $startCycleCol) {
+                continue; // déjà ajouté explicitement ci-dessus — évite "Column specified twice"
+            }
+            $colNames[] = $col;
         }
         $columnList = implode(', ', $colNames);
 
@@ -146,6 +152,9 @@ class okofen extends connectDb
                     //creation des valeurs pour les capteurs
                     //on commence à la deuxieme colonne de la ligne du csv
                     for ($i = 2; $i <= $nbColCsv; ++$i) {
+                        if ('col_'.$capteurs[$i]['column_oko'] === $startCycleCol) {
+                            continue; // valeur calculée, pas lue depuis le CSV
+                        }
                         $row .= ', '.$this->cvtDec($colCsv[$i]);
                     }
                     $row .= ')';
@@ -161,7 +170,11 @@ class okofen extends connectDb
         if (!empty($valueRows)) {
             $sql = 'INSERT IGNORE INTO oko_historique_full ('.$columnList.') VALUES '.implode(', ', $valueRows);
             $this->log->debug('Class '.__CLASS__.' | '.__FUNCTION__.' | batch INSERT '.(count($valueRows)).' lignes');
-            $this->query($sql);
+            if (!$this->query($sql)) {
+                $this->log->error('Class '.__CLASS__.' | '.__FUNCTION__.' | Échec batch INSERT — vérifier max_allowed_packet ou schéma colonnes');
+
+                return false;
+            }
         }
 
         $this->log->info('Class '.__CLASS__.' | '.__FUNCTION__.' | SUCCESS - import du CSV dans la BDD - '.$ln.' lignes en '.$t->getTime().' sec ');

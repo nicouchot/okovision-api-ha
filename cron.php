@@ -99,8 +99,7 @@ if ($hour > 0 || ($hour === 0 && $minute >= 1)) {
             foreach ($files as $fileToDownload) {
                 $date = $oko->getDateFromFilename($fileToDownload);
                 if ($date && !$oko->isDayComplete($date)) {
-                    $adm->importFileFromTmp($fileToDownload);
-                    $oko->csv2bdd();
+                    $adm->importFileFromTmp($fileToDownload); // appelle csv2bdd() en interne
                     $oko->makeSyntheseByDay($date, true);
                     $log->info("Cron | Mail import : {$fileToDownload} → {$date}");
                 }
