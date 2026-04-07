@@ -37,10 +37,12 @@ if ($oko->getChaudiereData($urlLog0)) {
 // log0 est écrit une fois à minuit : il ne contient pas les données de la
 // journée courante. On complète avec un snapshot /all? qui insère une ligne
 // par appel du cron dans oko_historique_full pour aujourd'hui.
-// Le INSERT IGNORE dans csv2bdd() garantit l'idempotence à la minute près.
+// csv2bdd(true) = mode snapshot : col_startCycle forcé à NULL pour éviter les faux
+// démarrages de cycle (old_status=0 déclencherait un front montant factice si statut=4).
+// L'import log0 du lendemain corrigera col_startCycle via ON DUPLICATE KEY UPDATE.
 sleep(2); // respecte le rate-limit de l'API (2500ms entre requêtes)
 if ($oko->storeLiveSnapshot()) {
-    $oko->csv2bdd();
+    $oko->csv2bdd(true); // liveSnapshot=true
     $log->info("Cron | Snapshot live importé pour {$today}");
 } else {
     $log->info("Cron | Snapshot live indisponible");

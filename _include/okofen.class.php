@@ -93,7 +93,22 @@ class okofen extends connectDb
 
     // integration du fichier csv dans okovision
     //V1.3.0
-    public function csv2bdd()
+    /**
+     * Importe le contenu de CSVFILE dans oko_historique_full.
+     *
+     * @param bool $liveSnapshot  true = import d'un snapshot /all? (1 seule ligne).
+     *   Dans ce mode :
+     *   - col_startCycle est forcé à NULL : impossible de détecter un front montant
+     *     sur une ligne isolée (old_status serait toujours 0, ce qui provoquerait un
+     *     faux démarrage de cycle si la chaudière est déjà en statut 4).
+     *   - INSERT IGNORE : ne remplace pas une ligne existante.
+     *   false (défaut) = import d'un fichier complet (log0, mail) :
+     *   - col_startCycle est calculé via la détection du front montant statut=4.
+     *   - ON DUPLICATE KEY UPDATE col_startCycle = VALUES(col_startCycle) : corrige
+     *     les éventuels col_startCycle = 1 erronément insérés par des snapshots
+     *     antérieurs sur les mêmes lignes (même jour + même heure).
+     */
+    public function csv2bdd(bool $liveSnapshot = false)
     {
         ini_set('max_execution_time', 120);
         $t = new timeExec();
@@ -143,9 +158,15 @@ class okofen extends connectDb
                     $heure = preg_replace('/:[0-9]{2}$/', ':00', $heure);
 
                     //Detection demarrage d'un cycle //Statut 4 = Debut d'un cycle sur le front montant du statut
-                    //Enregistrement de 1 si nous commençons un cycle d'allumage, NULL sinon
-                    $stVal = ('4' == $colCsv[$capteurStatus['position_column_csv']] && $colCsv[$capteurStatus['position_column_csv']] != $old_status)
-                        ? '1' : 'NULL';
+                    //Enregistrement de 1 si nous commençons un cycle d'allumage, NULL sinon.
+                    //En mode snapshot, on ne peut pas détecter le front montant (old_status=0 toujours) :
+                    //on force NULL pour éviter de comptabiliser un faux démarrage de cycle.
+                    if ($liveSnapshot) {
+                        $stVal = 'NULL';
+                    } else {
+                        $stVal = ('4' == $colCsv[$capteurStatus['position_column_csv']] && $colCsv[$capteurStatus['position_column_csv']] != $old_status)
+                            ? '1' : 'NULL';
+                    }
 
                     $row = "(STR_TO_DATE('".$jour."','%d.%m.%Y'), '".$heure."', UNIX_TIMESTAMP(CONCAT(STR_TO_DATE('".$jour."','%d.%m.%Y'),' ','".$heure."')), ".$stVal;
 
@@ -168,8 +189,16 @@ class okofen extends connectDb
         fclose($file);
 
         if (!empty($valueRows)) {
-            $sql = 'INSERT IGNORE INTO oko_historique_full ('.$columnList.') VALUES '.implode(', ', $valueRows);
-            $this->log->debug('Class '.__CLASS__.' | '.__FUNCTION__.' | batch INSERT '.(count($valueRows)).' lignes');
+            if ($liveSnapshot) {
+                // Snapshot : INSERT IGNORE — ne remplace pas une ligne déjà présente
+                $sql = 'INSERT IGNORE INTO oko_historique_full ('.$columnList.') VALUES '.implode(', ', $valueRows);
+            } else {
+                // Import complet (log0, mail) : corrige col_startCycle sur les lignes déjà
+                // présentes (snapshots antérieurs ayant pu enregistrer un faux col_startCycle=1)
+                $sql = 'INSERT INTO oko_historique_full ('.$columnList.') VALUES '.implode(', ', $valueRows)
+                      .' ON DUPLICATE KEY UPDATE '.$startCycleCol.' = VALUES('.$startCycleCol.')';
+            }
+            $this->log->debug('Class '.__CLASS__.' | '.__FUNCTION__.' | batch INSERT '.(count($valueRows)).' lignes (liveSnapshot='.($liveSnapshot ? 'true' : 'false').')');
             if (!$this->query($sql)) {
                 $this->log->error('Class '.__CLASS__.' | '.__FUNCTION__.' | Échec batch INSERT — vérifier max_allowed_packet ou schéma colonnes');
 

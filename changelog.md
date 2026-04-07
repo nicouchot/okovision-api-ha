@@ -1,3 +1,16 @@
+v0.53.2 (2026-04-07)
+--------------------
+* okofen.class.php : csv2bdd() — correction faux démarrages de cycle causés par le snapshot live.
+  Chaque appel du cron en mode snapshot réinitialisait old_status=0 ; si la chaudière était en
+  statut 4, la condition de front montant était toujours vraie → col_startCycle=1 inséré à chaque
+  minute de snapshot, gonflant nb_cycle (ex. : 1 cycle réel → 9 entrées sur 45 min de chauffe).
+  Fix : ajout du paramètre bool $liveSnapshot=false à csv2bdd().
+  - liveSnapshot=true (snapshot /all?) : col_startCycle forcé à NULL + INSERT IGNORE inchangé.
+  - liveSnapshot=false (log0, mail)    : détection de front montant conservée + INSERT INTO ...
+    ON DUPLICATE KEY UPDATE col_startCycle = VALUES(col_startCycle) pour corriger les éventuels
+    col_startCycle=1 erronés laissés par des snapshots sur les mêmes lignes (jour+heure).
+* cron.php : appel csv2bdd(true) à l'étape 1b (snapshot live) pour activer le mode snapshot.
+
 v0.53.1 (2026-04-04)
 --------------------
 * okofen.class.php : csv2bdd() — correction doublon `col_startCycle` dans le batch INSERT.
