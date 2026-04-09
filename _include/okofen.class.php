@@ -108,24 +108,23 @@ class okofen extends connectDb
      *     les éventuels col_startCycle = 1 erronément insérés par des snapshots
      *     antérieurs sur les mêmes lignes (même jour + même heure).
      */
-    public function csv2bdd(bool $liveSnapshot = false)
+    public function csv2bdd()
     {
         ini_set('max_execution_time', 120);
         $t = new timeExec();
 
         $ob_capteur = new capteur();
         $capteurs = $ob_capteur->getForImportCsv(); //l'index du tableau correspond a la colonne du capteur dans le fichier csv
-        $capteurStatus = $ob_capteur->getByType('status');
         $startCycle = $ob_capteur->getByType('startCycle');
         unset($ob_capteur);
 
         $file = fopen(CSVFILE, 'r');
         $ln = 0;
-        $old_status = 0;
         $nbColCsv = count($capteurs);
 
         // Build column list once — fixed order: jour, heure, timestamp, col_startCycle, then sensor cols.
-        // col_startCycle est calculé (détection front montant statut=4), pas lu directement dans le CSV.
+        // col_startCycle est toujours inséré à NULL : recalcStartCycleForDay() recalcule les fronts
+        // montants depuis la BDD après import, évitant le problème $old_status=0 de chaque appel cron.
         // On l'exclut du loop pour éviter un doublon si position_column_csv != -1.
         $startCycleCol = 'col_'.$startCycle['column_oko'];
         $colNames = ['jour', 'heure', 'timestamp', $startCycleCol];
@@ -157,31 +156,20 @@ class okofen extends connectDb
                     // Case of an import on the same day of the web files and the USB files
                     $heure = preg_replace('/:[0-9]{2}$/', ':00', $heure);
 
-                    //Detection demarrage d'un cycle //Statut 4 = Debut d'un cycle sur le front montant du statut
-                    //Enregistrement de 1 si nous commençons un cycle d'allumage, NULL sinon.
-                    //En mode snapshot, on ne peut pas détecter le front montant (old_status=0 toujours) :
-                    //on force NULL pour éviter de comptabiliser un faux démarrage de cycle.
-                    if ($liveSnapshot) {
-                        $stVal = 'NULL';
-                    } else {
-                        $stVal = ('4' == $colCsv[$capteurStatus['position_column_csv']] && $colCsv[$capteurStatus['position_column_csv']] != $old_status)
-                            ? '1' : 'NULL';
-                    }
-
-                    $row = "(STR_TO_DATE('".$jour."','%d.%m.%Y'), '".$heure."', UNIX_TIMESTAMP(CONCAT(STR_TO_DATE('".$jour."','%d.%m.%Y'),' ','".$heure."')), ".$stVal;
+                    // col_startCycle = NULL à l'import ; recalcStartCycleForDay() le recalcule
+                    // correctement depuis toutes les données du jour présentes en base.
+                    $row = "(STR_TO_DATE('".$jour."','%d.%m.%Y'), '".$heure."', UNIX_TIMESTAMP(CONCAT(STR_TO_DATE('".$jour."','%d.%m.%Y'),' ','".$heure."')), NULL";
 
                     //creation des valeurs pour les capteurs
                     //on commence à la deuxieme colonne de la ligne du csv
                     for ($i = 2; $i <= $nbColCsv; ++$i) {
                         if ('col_'.$capteurs[$i]['column_oko'] === $startCycleCol) {
-                            continue; // valeur calculée, pas lue depuis le CSV
+                            continue; // valeur calculée par recalcStartCycleForDay(), pas lue depuis le CSV
                         }
                         $row .= ', '.$this->cvtDec($colCsv[$i]);
                     }
                     $row .= ')';
                     $valueRows[] = $row;
-
-                    $old_status = $colCsv[$capteurStatus['position_column_csv']];
                 }
             }
             ++$ln;
@@ -189,16 +177,8 @@ class okofen extends connectDb
         fclose($file);
 
         if (!empty($valueRows)) {
-            if ($liveSnapshot) {
-                // Snapshot : INSERT IGNORE — ne remplace pas une ligne déjà présente
-                $sql = 'INSERT IGNORE INTO oko_historique_full ('.$columnList.') VALUES '.implode(', ', $valueRows);
-            } else {
-                // Import complet (log0, mail) : corrige col_startCycle sur les lignes déjà
-                // présentes (snapshots antérieurs ayant pu enregistrer un faux col_startCycle=1)
-                $sql = 'INSERT INTO oko_historique_full ('.$columnList.') VALUES '.implode(', ', $valueRows)
-                      .' ON DUPLICATE KEY UPDATE '.$startCycleCol.' = VALUES('.$startCycleCol.')';
-            }
-            $this->log->debug('Class '.__CLASS__.' | '.__FUNCTION__.' | batch INSERT '.(count($valueRows)).' lignes (liveSnapshot='.($liveSnapshot ? 'true' : 'false').')');
+            $sql = 'INSERT IGNORE INTO oko_historique_full ('.$columnList.') VALUES '.implode(', ', $valueRows);
+            $this->log->debug('Class '.__CLASS__.' | '.__FUNCTION__.' | batch INSERT '.count($valueRows).' lignes');
             if (!$this->query($sql)) {
                 $this->log->error('Class '.__CLASS__.' | '.__FUNCTION__.' | Échec batch INSERT — vérifier max_allowed_packet ou schéma colonnes');
 
@@ -221,6 +201,68 @@ class okofen extends connectDb
      *
      * @return bool
      */
+    /**
+     * Recalcule col_startCycle pour tous les enregistrements d'un jour donné
+     * à partir des données déjà présentes en base, en détectant les fronts
+     * montants du statut 4 (début de cycle de combustion).
+     *
+     * Avantage vs. détection pendant csv2bdd() :
+     *  - ne dépend pas de $old_status=0 qui reset à chaque appel du cron
+     *  - s'applique à toutes les lignes du jour, qu'elles viennent de log0
+     *    ou de snapshots live
+     *
+     * @param string $day Format 'Y-m-d'
+     */
+    private function recalcStartCycleForDay($day)
+    {
+        $ob_capteur    = new capteur();
+        $capteurStatus = $ob_capteur->getByType('status');
+        $startCycle    = $ob_capteur->getByType('startCycle');
+        $statusCol     = 'col_'.$capteurStatus['column_oko'];
+        $startCycleCol = 'col_'.$startCycle['column_oko'];
+
+        // Statut initial = dernier statut connu de la veille (évite un faux démarrage
+        // si la chaudière était déjà en combustion à minuit).
+        $prevQ   = "SELECT {$statusCol} FROM oko_historique_full
+                    WHERE jour = DATE_SUB('{$day}', INTERVAL 1 DAY)
+                    ORDER BY heure DESC LIMIT 1";
+        $prevRes = $this->query($prevQ);
+        $prevRow = $prevRes ? $prevRes->fetch_object() : null;
+        $prevStatus = $prevRow ? (int) $prevRow->{$statusCol} : 0;
+
+        // Lire toutes les lignes du jour, dans l'ordre chronologique.
+        $q   = "SELECT heure, {$statusCol} FROM oko_historique_full
+                WHERE jour = '{$day}' ORDER BY heure ASC";
+        $res = $this->query($q);
+        if (!$res) {
+            $this->log->error('Class '.__CLASS__.' | '.__FUNCTION__." | Échec lecture données pour {$day}");
+            return;
+        }
+
+        // Identifier les heure de démarrage de cycle (front montant statut → 4).
+        $cycleStartHeures = [];
+        while ($row = $res->fetch_object()) {
+            $status = (int) $row->{$statusCol};
+            if ($status === 4 && $prevStatus !== 4) {
+                $cycleStartHeures[] = $row->heure;
+            }
+            $prevStatus = $status;
+        }
+
+        // Remettre tous les col_startCycle du jour à NULL…
+        $this->query("UPDATE oko_historique_full SET {$startCycleCol} = NULL WHERE jour = '{$day}'");
+
+        // …puis marquer uniquement les fronts montants détectés.
+        if (!empty($cycleStartHeures)) {
+            $inList = implode("','", $cycleStartHeures);
+            $this->query("UPDATE oko_historique_full SET {$startCycleCol} = 1
+                          WHERE jour = '{$day}' AND heure IN ('{$inList}')");
+        }
+
+        $this->log->info('Class '.__CLASS__.' | '.__FUNCTION__
+            ." | {$day} — ".count($cycleStartHeures).' démarrage(s) de cycle recalculé(s)');
+    }
+
     public function makeSyntheseByDay($dateChoosen = null, $bForce = true)
     {
         //on ne fait rien si la date choisie est la date du jour
@@ -235,6 +277,9 @@ class okofen extends connectDb
         if (!$this->deleteSyntheseDay($dateChoosen)) {
             return false;
         }
+
+        // Recalcule col_startCycle depuis les données en base (indépendant du CSV)
+        $this->recalcStartCycleForDay($dateChoosen);
 
         return $this->insertSyntheseDay($dateChoosen);
     }

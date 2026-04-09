@@ -1,3 +1,31 @@
+v0.54.0 (2026-04-09)
+--------------------
+* okofen.class.php : nouvelle méthode privée recalcStartCycleForDay($day) — recalcule
+  col_startCycle pour tous les enregistrements d'un jour donné directement depuis la BDD,
+  en détectant les fronts montants du statut 4 (début de cycle de combustion).
+  - Lit toutes les lignes du jour dans l'ordre chronologique depuis oko_historique_full.
+  - Initialise le statut de départ avec la dernière valeur de la veille (évite le faux
+    démarrage si la chaudière était déjà en combustion à minuit).
+  - Remet tous les col_startCycle du jour à NULL, puis positionne 1 uniquement sur les
+    fronts montants détectés.
+  - Avantage clé : indépendant de $old_status=0 qui se réinitialisait à chaque appel du
+    cron, et indépendant de la fenêtre glissante de log0 (24h), qui laissait les lignes
+    insérées par snapshot sans col_startCycle correct.
+* okofen.class.php : makeSyntheseByDay() appelle recalcStartCycleForDay() avant
+  insertSyntheseDay() — garantit que le compte de cycles est recalculé depuis les données
+  réelles en base avant chaque reconstruction de synthèse.
+* okofen.class.php : csv2bdd() simplifié — col_startCycle toujours inséré à NULL,
+  toujours INSERT IGNORE, suppression du paramètre $liveSnapshot devenu inutile.
+  La détection des cycles est désormais entièrement déléguée à recalcStartCycleForDay().
+* cron.php : suppression de l'argument true dans l'appel csv2bdd(true) à l'étape 1b —
+  la signature de csv2bdd() ne prend plus de paramètre.
+  Mise à jour du commentaire de l'étape 1b pour refléter la nouvelle architecture.
+* Corrige : 0 cycles pour hier (snapshot rows = NULL, jamais corrigées car hors fenêtre
+  log0 lors du recalcul de synthèse).
+* Corrige (à partir du prochain appel makeSyntheseByDay) : 180 cycles pour le 7/4/26
+  (faux col_startCycle=1 laissés par des snapshots pre-fix, désormais réinitialisés par
+  recalcStartCycleForDay avant chaque synthèse).
+
 v0.53.2 (2026-04-07)
 --------------------
 * okofen.class.php : csv2bdd() — correction faux démarrages de cycle causés par le snapshot live.
