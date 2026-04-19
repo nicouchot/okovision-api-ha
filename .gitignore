@@ -51,4 +51,8 @@ _tmp/*.txt
 php.ini
 .c9/
 
+# Claude Code — configuration locale (stockée dans ~/.claude-configs)
+.claude/
+CLAUDE.md
+
 
