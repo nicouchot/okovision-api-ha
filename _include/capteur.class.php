@@ -44,7 +44,7 @@ class capteur extends connectDb
     public function get($id)
     {
         $capteur = [];
-        if (null != $id) {
+        if (null !== $id) {
             $result = $this->query('select id, name, position_column_csv, column_oko, original_name, type from oko_capteur where id= '.$id);
             $capteur = $result->fetch_assoc();
         }

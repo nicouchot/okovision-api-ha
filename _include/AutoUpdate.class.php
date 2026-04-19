@@ -149,7 +149,7 @@ class AutoUpdate extends connectDb
      * @param string $installDir
      * @param int    $maxExecutionTime
      */
-    public function __construct($tempDir = null, $installDir = null, $maxExecutionTime = 120)
+    public function __construct(?string $tempDir = null, ?string $installDir = null, int $maxExecutionTime = 120)
     {
         parent::__construct();
         // Init logger
@@ -819,7 +819,7 @@ class AutoUpdate extends connectDb
                 $this->log->debug(sprintf('File "%s" created', $absoluteFilename));
             }
 
-            $updateHandle = @fopen($absoluteFilename, 'w');
+            $updateHandle = fopen($absoluteFilename, 'w');
 
             if (!$updateHandle) {
                 $this->log->error(sprintf('Could not open file "%s"!', $absoluteFilename));

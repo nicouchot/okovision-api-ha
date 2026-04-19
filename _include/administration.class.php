@@ -35,14 +35,15 @@ class administration extends connectDb
         $ip = $tmp[0];
         $port = isset($tmp[1]) ? $tmp[1] : 80;
 
-        if ($fp = @fsockopen($ip, $port, $errCode, $errStr, $waitTimeoutInSeconds)) {
+        $fp = fsockopen($ip, $port, $errCode, $errStr, $waitTimeoutInSeconds);
+        if ($fp) {
             // It worked
             $r['response'] = true;
             $r['url'] = 'http://'.$address.URL;
+            fclose($fp);
         } else {
             $r['response'] = false;
         }
-        @fclose($fp);
 
         $this->sendResponse($r);
     }

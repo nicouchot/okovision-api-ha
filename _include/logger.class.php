@@ -26,7 +26,7 @@ class logger
      */
     public function __construct()
     {
-        if (null == $this->logfilehandle) {
+        if (null === $this->logfilehandle) {
             $this->openLogFile(LOGFILE);
         }
     }
@@ -52,7 +52,7 @@ class logger
      */
     public function log($message, $messageType = Logger::WARNING)
     {
-        if (null == $this->logfilehandle) {
+        if (null === $this->logfilehandle) {
             throw new LogFileNotOpenException('Logfile is not opened.');
         }
         if (!is_string($message)) {
@@ -69,7 +69,7 @@ class logger
      */
     public function closeLogFile()
     {
-        if (null != $this->logfilehandle) {
+        if (null !== $this->logfilehandle) {
             fclose($this->logfilehandle);
             $this->logfilehandle = null;
         }
@@ -86,7 +86,7 @@ class logger
     {
         $this->closeLogFile(); //close old logfile if opened;
 
-        $this->logfilehandle = @fopen($logfile, 'a');
+        $this->logfilehandle = fopen($logfile, 'a');
 
         if (!$this->logfilehandle) {
             throw new LogFileOpenErrorException('Could not open Logfile in append-mode');

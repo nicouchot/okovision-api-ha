@@ -36,7 +36,7 @@ class connectDb
     // Get mysqli connection
     protected function getConnection()
     {
-        if (null == $this->db) {
+        if (null === $this->db) {
             $this->connect();
         }
 

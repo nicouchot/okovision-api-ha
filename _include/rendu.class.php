@@ -41,7 +41,7 @@ class rendu extends connectDb
 
             $res = $this->query($q);
 
-            $data = null;
+            $data = '';
 
             while ($r = $res->fetch_object()) {
                 //si value == null c'est qu'il n'y a pas de data donc on affiche pas la données
@@ -67,9 +67,9 @@ class rendu extends connectDb
         $this->sendResponse($r);
     }
 
-    public function getIndicByDay($jour, $timeStart = null, $timeEnd = null)
+    public function getIndicByDay(string $jour, ?int $timeStart = null, ?int $timeEnd = null)
     {
-        if (null != $timeStart && null != $timeEnd) {
+        if (null !== $timeStart && null !== $timeEnd) {
             $timeStart = (int) ($timeStart / 1000);
             $timeEnd = (int) ($timeEnd / 1000);
         }
@@ -105,7 +105,7 @@ class rendu extends connectDb
      * @param mixed      $type
      *                              Specify type of consommation : default all, or heater (Chauffage) or hotwater (ECS)
      */
-    public function getConsoByday($jour, $timeStart = null, $timeEnd = null, $type = null)
+    public function getConsoByday(string $jour, ?int $timeStart = null, ?int $timeEnd = null, ?string $type = null)
     {
         $coeff = POIDS_PELLET_PAR_MINUTE / 1000;
         $c = new capteur();
@@ -114,7 +114,7 @@ class rendu extends connectDb
 
         //limiter le calcul une intervalle de temps ou la journéee entiere
         $intervalle = '';
-        if (null != $timeStart && null != $timeEnd) {
+        if (null !== $timeStart && null !== $timeEnd) {
             $intervalle = 'AND timestamp BETWEEN '.$timeStart.' AND '.$timeEnd;
         }
 
@@ -122,7 +122,7 @@ class rendu extends connectDb
         $usage = '';
         if ('hotwater' == $type) { //just first circuit for now
             $capteur_ecs = $c->getByType('hotwater[0]');
-            if (null == $capteur_ecs) {
+            if (null === $capteur_ecs) {
                 return ['consoPellet' => null];
             }
             $usage = ' AND a.col_'.$capteur_ecs['column_oko'].' = 1';
@@ -146,14 +146,14 @@ class rendu extends connectDb
      * @param null|mixed $timeStart
      * @param null|mixed $timeEnd
      */
-    public function getTcMaxByDay($jour, $timeStart = null, $timeEnd = null)
+    public function getTcMaxByDay(string $jour, ?int $timeStart = null, ?int $timeEnd = null)
     {
         $c = new capteur();
         $capteur = $c->getByType('tc_ext');
 
         //limiter le calcul une intervalle de temps ou la journéee entiere
         $intervalle = '';
-        if (null != $timeStart && null != $timeEnd) {
+        if (null !== $timeStart && null !== $timeEnd) {
             $intervalle = 'AND timestamp BETWEEN '.$timeStart.' AND '.$timeEnd;
         }
 
@@ -167,14 +167,14 @@ class rendu extends connectDb
         return $result->fetch_object();
     }
 
-    public function getTcMinByDay($jour, $timeStart = null, $timeEnd = null)
+    public function getTcMinByDay(string $jour, ?int $timeStart = null, ?int $timeEnd = null)
     {
         $c = new capteur();
         $capteur = $c->getByType('tc_ext');
 
         //limiter le calcul une intervalle de temps ou la journéee entiere
         $intervalle = '';
-        if (null != $timeStart && null != $timeEnd) {
+        if (null !== $timeStart && null !== $timeEnd) {
             $intervalle = 'AND timestamp BETWEEN '.$timeStart.' AND '.$timeEnd;
         }
 
@@ -468,7 +468,7 @@ class rendu extends connectDb
                     'GROUP BY MONTH(oko_dateref.jour) '.
                     'ORDER BY YEAR(oko_dateref.jour), MONTH(oko_dateref.jour) ASC;';
 
-        $resultat = null;
+        $resultat = '';
 
         foreach ($categorie as $label => $colonneSql) {
             $q = 'SELECT if(MONTH(oko_dateref.jour) = MONTH(NOW()) AND YEAR(oko_dateref.jour) = YEAR(now()),null,'.$colonneSql.') '.$where;
@@ -476,7 +476,7 @@ class rendu extends connectDb
             $this->log->debug('Class '.__CLASS__.' | '.__FUNCTION__.' | '.$q);
 
             $result = $this->query($q);
-            $data = null;
+            $data = '';
 
             while ($r = $result->fetch_row()) {
                 $date = new DateTime($r[1], new DateTimeZone('Europe/Paris'));
@@ -551,7 +551,7 @@ class rendu extends connectDb
     private function getDataWithTime($q)
     {
         $result = $this->query($q);
-        $data = null;
+        $data = '';
 
         while ($r = $result->fetch_object()) {
             if (null !== $r->value) {

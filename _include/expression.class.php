@@ -378,7 +378,7 @@ class expression
      * @param int  $b       The build number
      * @param int  $t       The version tag
      */
-    protected static function constructVersionFromParts($padZero = true, $ma = null, $mi = null, $p = null, $b = null, $t = null)
+    protected static function constructVersionFromParts(bool $padZero = true, ?int $ma = null, ?int $mi = null, ?int $p = null, ?int $b = null, ?string $t = null)
     {
         if ($padZero) {
             if (null === $ma) {

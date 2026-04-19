@@ -176,7 +176,7 @@ class okofen extends connectDb
      *
      * @return bool
      */
-    public function makeSyntheseByDay($dateChoosen = null, $bForce = true)
+    public function makeSyntheseByDay(?string $dateChoosen = null, bool $bForce = true)
     {
         //on ne fait rien si la date choisie est la date du jour
         if ($dateChoosen == date('Y-m-d', mktime(0, 0, 0, date('m'), date('d'), date('Y')))) {
@@ -320,9 +320,9 @@ class okofen extends connectDb
         $dju = $rendu->getDju($max->tcExtMax, $min->tcExtMin);
         $cycle = $rendu->getNbCycleByDay($day);
 
-        $consoPellet = (null == $conso->consoPellet) ? 0 : $conso->consoPellet;
-        $consoEcsPellet = (null == $conso_ecs->consoPellet) ? 0 : $conso_ecs->consoPellet;
-        $nbCycle = (null == $cycle->nbCycle) ? 0 : $cycle->nbCycle;
+        $consoPellet = (null === $conso->consoPellet) ? 0 : $conso->consoPellet;
+        $consoEcsPellet = (null === $conso_ecs->consoPellet) ? 0 : $conso_ecs->consoPellet;
+        $nbCycle = (null === $cycle->nbCycle) ? 0 : $cycle->nbCycle;
 
         $query .= "('".$day."', ".$max->tcExtMax.', '.$min->tcExtMin.', '.$consoPellet.', '.$consoEcsPellet.', '.$dju.', '.$nbCycle.' );';
 

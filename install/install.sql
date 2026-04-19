@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS `oko_resume_day` (
   `conso_kg` decimal(6,2) DEFAULT NULL,
   `conso_ecs_kg` decimal(6,2) DEFAULT NULL,
   `dju` decimal(6,2) DEFAULT NULL,
-  `nb_cycle` int(1) unsigned zerofill DEFAULT '0',
+  `nb_cycle` tinyint unsigned DEFAULT '0',
   PRIMARY KEY (`jour`)
 ) ENGINE=MYISAM DEFAULT CHARSET=utf8;
 
@@ -49,8 +49,8 @@ CREATE TABLE IF NOT EXISTS `oko_user` (
   `user` tinytext NOT NULL,
   `pass` tinytext NOT NULL,
   `type` tinytext NOT NULL,
-  `login_boiler` TINYTEXT NULL DEFAULT NULL,
-  `pass_boiler` TINYTEXT NULL DEFAULT NULL,
+  `login_boiler` VARCHAR(255) NULL DEFAULT NULL,
+  `pass_boiler` VARCHAR(255) NULL DEFAULT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=MYISAM AUTO_INCREMENT=0 DEFAULT CHARSET=utf8;
 

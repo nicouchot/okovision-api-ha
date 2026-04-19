@@ -39,7 +39,7 @@ class UploadHandler
 
     protected $image_objects = [];
 
-    public function __construct($options = null, $initialize = true, $error_messages = null)
+    public function __construct(?array $options = null, bool $initialize = true, ?array $error_messages = null)
     {
         $this->response = [];
         $this->options = [
@@ -408,7 +408,7 @@ class UploadHandler
         return '';
     }
 
-    protected function get_upload_path($file_name = null, $version = null)
+    protected function get_upload_path(?string $file_name = null, ?string $version = null)
     {
         $file_name = $file_name ? $file_name : '';
         if (empty($version)) {
@@ -430,7 +430,7 @@ class UploadHandler
         return false === strpos($url, '?') ? '?' : '&';
     }
 
-    protected function get_download_url($file_name, $version = null, $direct = false)
+    protected function get_download_url(string $file_name, ?string $version = null, bool $direct = false)
     {
         if (!$direct && $this->options['download_via_php']) {
             $url = $this->options['script_url']
