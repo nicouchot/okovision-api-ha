@@ -30,16 +30,15 @@
     					  <div class="col-md-3">
     					    <select id="oko_typeconnect" name="oko_typeconnect" class="form-control">
     					        <option value="0">USB</option>
-    			                <option value="1" <?php if (GET_CHAUDIERE_DATA_BY_IP) {
-    echo 'selected=selected';
-} ?> >IP</option>
+    			                <option value="1" <?php if (GET_CHAUDIERE_DATA_BY_IP === 1) { echo 'selected=selected'; } ?>>IP</option>
+    			                <option value="2" <?php if (GET_CHAUDIERE_DATA_BY_IP === 2) { echo 'selected=selected'; } ?>>IP via Json (firmware v4.00b)</option>
     					    </select>
     					  </div>
-    					 
+
     					</div>
-    					
+
                         <!-- Text input-->
-                        <div class="form-group" id="form-ip" <?php if (!GET_CHAUDIERE_DATA_BY_IP) {
+                        <div class="form-group" id="form-ip" <?php if (GET_CHAUDIERE_DATA_BY_IP < 1) {
     echo 'style="display: none;"';
 } ?>>
                             <label class="col-md-4 control-label" for="oko_ip"><?php echo session::getInstance()->getLabel('lang.text.page.admin.boilerip'); ?></label>  
@@ -54,8 +53,57 @@
                             </div>
     					</div>
     				
+                        <!-- JSON V4 port -->
+                        <div class="form-group" id="form-json-port" <?php if (GET_CHAUDIERE_DATA_BY_IP !== 2) { echo 'style="display: none;"'; } ?>>
+                            <label class="col-md-4 control-label" for="oko_json_port"><?php echo session::getInstance()->getLabel('lang.text.page.admin.boilerjsonport'); ?></label>
+                            <div class="col-md-3">
+                                <input id="oko_json_port" name="oko_json_port" type="text" class="form-control input-md" placeholder="ex : 4444" value="<?php echo PORT_JSON; ?>">
+                            </div>
+                        </div>
+
+                        <!-- JSON V4 password -->
+                        <div class="form-group" id="form-json-pwd" <?php if (GET_CHAUDIERE_DATA_BY_IP !== 2) { echo 'style="display: none;"'; } ?>>
+                            <label class="col-md-4 control-label" for="oko_json_pwd"><?php echo session::getInstance()->getLabel('lang.text.page.admin.boilerjsonPWD'); ?></label>
+                            <div class="col-md-3">
+                                <input id="oko_json_pwd" name="oko_json_pwd" type="text" class="form-control input-md" placeholder="ex : 1234" value="<?php echo PASSWORD_JSON; ?>">
+                            </div>
+                            <div class="col-md-3">
+                                <button type="button" class="btn btn-xs btn-default" id="test_oko_json">
+                                    <span class="glyphicon glyphicon-share" aria-hidden="true"></span><?php echo session::getInstance()->getLabel('lang.text.page.admin.test'); ?>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Mailbox configuration -->
+                        <div class="form-group" id="form-mail-host" <?php if (GET_CHAUDIERE_DATA_BY_IP !== 2) { echo 'style="display: none;"'; } ?>>
+                            <label class="col-md-4 control-label" for="mail_host"><?php echo session::getInstance()->getLabel('lang.text.page.admin.mailhost'); ?></label>
+                            <div class="col-md-3">
+                                <input id="mail_host" name="mail_host" type="text" class="form-control input-md" placeholder="ex : {imap.exemple.com:993/imap/ssl}" value="<?php echo URL_MAIL; ?>">
+                                <span class="help-block"><?php echo session::getInstance()->getLabel('lang.text.page.admin.mailcomm'); ?></span>
+                            </div>
+                        </div>
+
+                        <div class="form-group" id="form-mail-log" <?php if (GET_CHAUDIERE_DATA_BY_IP !== 2) { echo 'style="display: none;"'; } ?>>
+                            <label class="col-md-4 control-label" for="mail_log"><?php echo session::getInstance()->getLabel('lang.text.page.admin.maillog'); ?></label>
+                            <div class="col-md-3">
+                                <input id="mail_log" name="mail_log" type="text" class="form-control input-md" placeholder="email@exemple.com" value="<?php echo LOGIN_MAIL; ?>">
+                            </div>
+                        </div>
+
+                        <div class="form-group" id="form-mail-pwd" <?php if (GET_CHAUDIERE_DATA_BY_IP !== 2) { echo 'style="display: none;"'; } ?>>
+                            <label class="col-md-4 control-label" for="mail_pwd"><?php echo session::getInstance()->getLabel('lang.text.page.admin.mailpwd'); ?></label>
+                            <div class="col-md-3">
+                                <input id="mail_pwd" name="mail_pwd" type="password" class="form-control input-md" value="<?php echo LOGIN_MAIL !== '' ? '••••••••' : ''; ?>">
+                            </div>
+                            <div class="col-md-3">
+                                <button type="button" class="btn btn-xs btn-default" id="test_mail">
+                                    <span class="glyphicon glyphicon-share" aria-hidden="true"></span><?php echo session::getInstance()->getLabel('lang.text.page.admin.test'); ?>
+                                </button>
+                            </div>
+                        </div>
+
     				</fieldset>
-    				
+
     				<fieldset>
     				    <legend><?php echo session::getInstance()->getLabel('lang.text.page.admin.param'); ?></legend>
 					
@@ -102,13 +150,65 @@
     					
     					<!-- Text input-->
     					<div class="form-group">
-    					  <label class="col-md-4 control-label" for="parap_poids_pellet"><?php echo session::getInstance()->getLabel('lang.text.page.admin.param.surface'); ?></label>  
+    					  <label class="col-md-4 control-label" for="parap_poids_pellet"><?php echo session::getInstance()->getLabel('lang.text.page.admin.param.surface'); ?></label>
     					  <div class="col-md-3">
     					  <input id="surface_maison" name="param_surface" type="text" placeholder="ex : 180" class="form-control input-md" required=""  value="<?php echo SURFACE_HOUSE; ?>">
-    					  <span class="help-block"><?php echo session::getInstance()->getLabel('lang.text.page.admin.param.surface.desc'); ?></span>  
+    					  <span class="help-block"><?php echo session::getInstance()->getLabel('lang.text.page.admin.param.surface.desc'); ?></span>
     					  </div>
     					</div>
-				
+
+    					<!-- PCI pellet -->
+    					<div class="form-group">
+    					  <label class="col-md-4 control-label" for="pci_pellet">PCI pellet (kWh/kg) :</label>
+    					  <div class="col-md-3">
+    					    <input id="pci_pellet" name="pci_pellet" type="number" step="0.01" placeholder="ex : 4.90" class="form-control input-md" value="<?php echo PCI_PELLET; ?>">
+    					  </div>
+    					</div>
+
+    					<!-- Rendement chaudière -->
+    					<div class="form-group">
+    					  <label class="col-md-4 control-label" for="rendement_chaudiere">Rendement chaudière (%) :</label>
+    					  <div class="col-md-3">
+    					    <input id="rendement_chaudiere" name="rendement_chaudiere" type="number" step="0.01" placeholder="ex : 89.50" class="form-control input-md" value="<?php echo RENDEMENT_CHAUDIERE; ?>">
+    					  </div>
+    					</div>
+
+				    </fieldset>
+
+    				<fieldset>
+    				    <legend>Token API</legend>
+
+    				    <div class="form-group">
+    				        <label class="col-md-4 control-label">Token HA :</label>
+    				        <div class="col-md-3">
+    				            <input id="api_token_display" type="text" class="form-control input-md" readonly value="<?php echo defined('TOKEN') ? substr(TOKEN, 0, 12).'...' : ''; ?>">
+    				        </div>
+    				        <div class="col-md-3">
+    				            <button type="button" class="btn btn-xs btn-warning" id="bt_regen_token">
+    				                <span class="glyphicon glyphicon-refresh" aria-hidden="true"></span> Régénérer
+    				            </button>
+    				        </div>
+    				    </div>
+
+    				</fieldset>
+
+    				<fieldset>
+    				    <legend>Recalcul historique</legend>
+
+    				    <div class="form-group">
+    				        <label class="col-md-4 control-label">Recalcul conso kWh + cumuls + prix :</label>
+    				        <div class="col-md-3">
+    				            <button type="button" class="btn btn-xs btn-default" id="bt_recalc_histo">
+    				                <span class="glyphicon glyphicon-cog" id="bt_recalc_histo_icon" aria-hidden="true"></span> Recalculer
+    				            </button>
+    				        </div>
+    				    </div>
+    				    <div class="form-group" id="recalc_result" style="display:none;">
+    				        <div class="col-md-offset-4 col-md-7">
+    				            <div class="alert alert-info" id="recalc_result_content"></div>
+    				        </div>
+    				    </div>
+
 				    </fieldset>
     			
 

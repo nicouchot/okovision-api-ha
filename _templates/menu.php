@@ -10,6 +10,8 @@
      //global $page;
      $page = basename($_SERVER['SCRIPT_NAME']);
 
+     $rtPage = (GET_CHAUDIERE_DATA_BY_IP === 2) ? 'rt_v4.php' : 'rt.php';
+
      $menu = ['index.php' => [
          'txt' => session::getInstance()->getLabel('lang.text.menu.index'),
          'icon' => 'glyphicon glyphicon-dashboard',
@@ -18,7 +20,7 @@
              'txt' => session::getInstance()->getLabel('lang.text.menu.historic'),
              'icon' => 'glyphicon glyphicon-stats',
              'logged' => false, ],
-         'rt.php' => [
+         $rtPage => [
              'txt' => session::getInstance()->getLabel('lang.text.menu.rt'),
              'icon' => 'glyphicon glyphicon-signal',
              'logged' => true, ],
@@ -67,8 +69,9 @@
                         
                     <li class="divider"></li>
                    
-                        <li class="dropdown-header"><span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span> <?php echo session::getInstance()->getLabel('lang.text.menu.manual'); ?></li>    
-                            <?php if (GET_CHAUDIERE_DATA_BY_IP) { ?><li><a href="amImpBoiler.php"><?php echo session::getInstance()->getLabel('lang.text.menu.manual.import.ip'); ?></a></li> <?php } ?>
+                        <li class="dropdown-header"><span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span> <?php echo session::getInstance()->getLabel('lang.text.menu.manual'); ?></li>
+                            <?php if (GET_CHAUDIERE_DATA_BY_IP >= 1) { ?><li><a href="amImpBoiler.php"><?php echo session::getInstance()->getLabel('lang.text.menu.manual.import.ip'); ?></a></li> <?php } ?>
+                            <?php if (GET_CHAUDIERE_DATA_BY_IP === 2) { ?><li><a href="amImpMail.php"><?php echo session::getInstance()->getLabel('lang.text.menu.manual.import.mail'); ?></a></li> <?php } ?>
                             <li><a href="amImpUsb.php"><?php echo session::getInstance()->getLabel('lang.text.menu.manual.import.usb'); ?></a></li>
                             <li><a href="amImportMass.php"><?php echo session::getInstance()->getLabel('lang.text.menu.manual.import.mass'); ?></a></li>
                             <li><a href="amSynthese.php"><?php echo session::getInstance()->getLabel('lang.text.menu.manual.synthese'); ?></a></li>

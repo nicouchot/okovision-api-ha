@@ -88,14 +88,21 @@
 
         // Make config.json
         $param = [
-            'chaudiere' => $s['oko_ip'],
-            'tc_ref' => $s['param_tcref'],
-            'poids_pellet' => $s['param_poids_pellet'],
-            'surface_maison' => $s['surface_maison'],
-            'get_data_from_chaudiere' => $s['oko_typeconnect'],
-            'send_to_web' => '0',
-            'has_silo' => '0',
-            'lang' => 'en',
+            'chaudiere'              => $s['oko_ip']               ?? '',
+            'tc_ref'                 => $s['param_tcref']          ?? '20',
+            'poids_pellet'           => $s['param_poids_pellet']   ?? '150',
+            'surface_maison'         => $s['surface_maison']       ?? '180',
+            'get_data_from_chaudiere'=> $s['oko_typeconnect']      ?? '0',
+            'send_to_web'            => '0',
+            'has_silo'               => '0',
+            'lang'                   => 'en',
+            'port_json'              => $s['oko_json_port']        ?? '',
+            'password_json'          => $s['oko_json_pwd']         ?? '',
+            'url_mail'               => $s['mail_host']            ?? '',
+            'login_mail'             => $s['mail_log']             ?? '',
+            'password_mail'          => $s['mail_pwd']             ?? '',
+            'pci_pellet'             => $s['pci_pellet']           ?? '4.90',
+            'rendement_chaudiere'    => $s['rendement_chaudiere']  ?? '89.50',
         ];
 
         file_put_contents('config.json', json_encode($param));
@@ -224,18 +231,59 @@
 					    <select id="oko_typeconnect" name="oko_typeconnect" class="form-control">
 					        <option value="0">USB</option>
 			                <option value="1">IP</option>
+			                <option value="2">IP via Json (firmware v4.00b)</option>
 					    </select>
 					  </div>
 					</div>
-					
+
 					<!-- Text input-->
 					<div class="form-group" id="form-ip" style="display: none;">
-					  <label class="col-md-4 control-label" for="oko_ip">Boiler IP address :</label>  
+					  <label class="col-md-4 control-label" for="oko_ip">Boiler IP address :</label>
 					  <div class="col-md-3">
 					    <input id="oko_ip" name="oko_ip" type="text" placeholder="ex : 192.168.0.xx" class="form-control input-md">
 					  </div>
 					</div>
-				
+
+					<!-- JSON V4 port -->
+					<div class="form-group" id="form-json-port" style="display: none;">
+					  <label class="col-md-4 control-label" for="oko_json_port">JSON port :</label>
+					  <div class="col-md-3">
+					    <input id="oko_json_port" name="oko_json_port" type="text" placeholder="ex : 4444" class="form-control input-md">
+					  </div>
+					</div>
+
+					<!-- JSON V4 password -->
+					<div class="form-group" id="form-json-pwd" style="display: none;">
+					  <label class="col-md-4 control-label" for="oko_json_pwd">JSON password :</label>
+					  <div class="col-md-3">
+					    <input id="oko_json_pwd" name="oko_json_pwd" type="text" placeholder="ex : 1234" class="form-control input-md">
+					  </div>
+					</div>
+
+					<!-- Mailbox host -->
+					<div class="form-group" id="form-mail-host" style="display: none;">
+					  <label class="col-md-4 control-label" for="mail_host">IMAP host :</label>
+					  <div class="col-md-3">
+					    <input id="mail_host" name="mail_host" type="text" placeholder="ex : {imap.exemple.com:993/imap/ssl}" class="form-control input-md">
+					  </div>
+					</div>
+
+					<!-- Mailbox login -->
+					<div class="form-group" id="form-mail-log" style="display: none;">
+					  <label class="col-md-4 control-label" for="mail_log">IMAP login :</label>
+					  <div class="col-md-3">
+					    <input id="mail_log" name="mail_log" type="text" placeholder="email@exemple.com" class="form-control input-md">
+					  </div>
+					</div>
+
+					<!-- Mailbox password -->
+					<div class="form-group" id="form-mail-pwd" style="display: none;">
+					  <label class="col-md-4 control-label" for="mail_pwd">IMAP password :</label>
+					  <div class="col-md-3">
+					    <input id="mail_pwd" name="mail_pwd" type="password" class="form-control input-md">
+					  </div>
+					</div>
+
 				</fieldset>
 			</form>
 
@@ -265,13 +313,31 @@
 					
 					<!-- Text input-->
 					<div class="form-group">
-					  <label class="col-md-4 control-label" for="parap_poids_pellet">House surface : </label>  
+					  <label class="col-md-4 control-label" for="parap_poids_pellet">House surface : </label>
 					  <div class="col-md-3">
 					  <input id="surface_maison" name="param_surface" type="text" placeholder="ex : 180" class="form-control input-md" required=""  value="180">
-					  <span class="help-block">in m²</span>  
+					  <span class="help-block">in m²</span>
 					  </div>
 					</div>
-				
+
+					<!-- PCI pellet -->
+					<div class="form-group">
+					  <label class="col-md-4 control-label" for="pci_pellet">Pellet PCI (kWh/kg) :</label>
+					  <div class="col-md-3">
+					    <input id="pci_pellet" name="pci_pellet" type="number" step="0.01" placeholder="ex : 4.90" class="form-control input-md" value="4.90">
+					    <span class="help-block">Lower heating value of pellets in kWh/kg</span>
+					  </div>
+					</div>
+
+					<!-- Rendement chaudière -->
+					<div class="form-group">
+					  <label class="col-md-4 control-label" for="rendement_chaudiere">Boiler efficiency (%) :</label>
+					  <div class="col-md-3">
+					    <input id="rendement_chaudiere" name="rendement_chaudiere" type="number" step="0.01" placeholder="ex : 89.50" class="form-control input-md" value="89.50">
+					    <span class="help-block">Boiler combustion efficiency in %</span>
+					  </div>
+					</div>
+
 				</fieldset>
 			</form>
             
@@ -296,5 +362,18 @@
 	<script src="js/custom.js"></script>
 <!--appel des scripts personnels de la page -->
 	<script src="js/setup.js"></script>
+	<script>
+	$(document).ready(function() {
+		$('#oko_typeconnect').change(function() {
+			var val = parseInt($(this).val(), 10);
+			if (val >= 1) { $('#form-ip').show(); } else { $('#form-ip').hide(); }
+			if (val === 2) {
+				$('#form-json-port, #form-json-pwd, #form-mail-host, #form-mail-log, #form-mail-pwd').show();
+			} else {
+				$('#form-json-port, #form-json-pwd, #form-mail-host, #form-mail-log, #form-mail-pwd').hide();
+			}
+		});
+	});
+	</script>
     </body>
 </html>
