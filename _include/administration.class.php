@@ -60,17 +60,24 @@ class administration extends connectDb
         // Make config.json
 
         $param = [
-            'chaudiere' => $s['oko_ip'],
-            'tc_ref' => $s['param_tcref'],
-            'poids_pellet' => $s['param_poids_pellet'],
-            'surface_maison' => $s['surface_maison'],
-            'get_data_from_chaudiere' => $s['oko_typeconnect'],
-            'timezone' => $s['timezone'],
-            'send_to_web' => $s['send_to_web'],
-            'has_silo' => $s['has_silo'],
-            'silo_size' => $s['silo_size'],
-            'ashtray' => $s['ashtray'],
-            'lang' => $s['lang'],
+            'chaudiere'              => $s['oko_ip'],
+            'port_json'              => $s['oko_json_port']  ?? '',
+            'password_json'          => $s['oko_json_pwd']   ?? '',
+            'url_mail'               => $s['mail_host']      ?? '',
+            'login_mail'             => $s['mail_log']       ?? '',
+            'password_mail'          => $s['mail_pwd']       ?? '',
+            'tc_ref'                 => $s['param_tcref'],
+            'poids_pellet'           => $s['param_poids_pellet'],
+            'surface_maison'         => $s['surface_maison'],
+            'get_data_from_chaudiere'=> $s['oko_typeconnect'],
+            'timezone'               => $s['timezone'],
+            'send_to_web'            => $s['send_to_web'],
+            'has_silo'               => $s['has_silo'],
+            'silo_size'              => $s['silo_size'],
+            'ashtray'                => $s['ashtray'],
+            'pci_pellet'             => $s['pci_pellet']             ?? '',
+            'rendement_chaudiere'    => $s['rendement_chaudiere']    ?? '',
+            'lang'                   => $s['lang'],
         ];
 
         $r = [];
@@ -86,11 +93,140 @@ class administration extends connectDb
     }
 
     /**
-     * Get file list from boiler.
+     * Recalcule toutes les colonnes dérivées de oko_resume_day sur l'ensemble de l'historique.
+     * Utile après modification du PCI ou du rendement.
+     *   - conso_kwh  = conso_kg × PCI_PELLET × (RENDEMENT / 100)
+     *   - cumul_kg / cumul_kwh / cumul_cycle  (totaux cumulés depuis le 1er jour)
+     *   - prix_kg / prix_kwh  (logique FIFO sur les livraisons PELLET)
      *
-     * @return json this list
+     * @return json response, statistiques et temps d'exécution
      */
-    public function getFileFromChaudiere()
+    public function recalcHistorique()
+    {
+        $start        = microtime(true);
+        $pci          = (float) PCI_PELLET;
+        $rendement    = (float) RENDEMENT_CHAUDIERE;
+        $energieParKg = $pci * $rendement / 100;
+
+        /* ── 1. Recalcul de conso_kwh ────────────────────────────────────── */
+        $this->query(
+            "UPDATE oko_resume_day
+             SET conso_kwh = ROUND(conso_kg * {$pci} * ({$rendement} / 100), 2)
+             WHERE conso_kg IS NOT NULL"
+        );
+
+        /* ── 2. Recalcul des cumulatifs (lecture séquentielle ASC) ────────── */
+        $result = $this->query(
+            "SELECT jour, conso_kg, conso_kwh, nb_cycle
+             FROM oko_resume_day
+             ORDER BY jour ASC"
+        );
+
+        $cumulKg    = 0.0;
+        $cumulKwh   = 0.0;
+        $cumulCycle = 0;
+        $rowsCumul  = 0;
+
+        while ($r = $result->fetch_object()) {
+            $cumulKg    = round($cumulKg    + (float)($r->conso_kg  ?? 0), 2);
+            $cumulKwh   = round($cumulKwh   + (float)($r->conso_kwh ?? 0), 2);
+            $cumulCycle = $cumulCycle + (int)($r->nb_cycle ?? 0);
+            $this->query(
+                "UPDATE oko_resume_day
+                 SET cumul_kg = {$cumulKg}, cumul_kwh = {$cumulKwh}, cumul_cycle = {$cumulCycle}
+                 WHERE jour = '{$r->jour}'"
+            );
+            $rowsCumul++;
+        }
+
+        /* ── 3. Chargement des lots PELLET avec cumul livré ──────────────── */
+        $lotResult = $this->query(
+            "SELECT e1.event_date, e1.quantity, e1.price,
+                    (SELECT SUM(e2.quantity) FROM oko_silo_events e2
+                     WHERE e2.event_type='PELLET' AND e2.event_date <= e1.event_date) AS cumul_livraison
+             FROM oko_silo_events e1
+             WHERE e1.event_type = 'PELLET' AND e1.quantity > 0
+             ORDER BY e1.event_date ASC"
+        );
+
+        $lots = [];
+        while ($l = $lotResult->fetch_object()) {
+            $lots[] = [
+                'prix_kg'         => round((float) $l->price / (float) $l->quantity, 4),
+                'cumul_livraison' => (float) $l->cumul_livraison,
+            ];
+        }
+        $lastPrixKg = !empty($lots) ? $lots[count($lots) - 1]['prix_kg'] : null;
+
+        /* ── 4. Affectation FIFO du prix par jour ────────────────────────── */
+        $rowsPrix = 0;
+        if (!empty($lots)) {
+            $rows2 = $this->query(
+                "SELECT jour, cumul_kg FROM oko_resume_day
+                 WHERE cumul_kg IS NOT NULL ORDER BY jour ASC"
+            );
+            while ($r = $rows2->fetch_object()) {
+                $prixKg = $lastPrixKg; // fallback : conso dépasse toutes les livraisons
+                foreach ($lots as $lot) {
+                    if ($lot['cumul_livraison'] >= (float) $r->cumul_kg) {
+                        $prixKg = $lot['prix_kg'];
+                        break;
+                    }
+                }
+                $prixKwh    = ($prixKg !== null && $energieParKg > 0)
+                    ? round($prixKg / $energieParKg, 4) : null;
+                $prixKwhSql = ($prixKwh !== null) ? $prixKwh : 'NULL';
+                $this->query(
+                    "UPDATE oko_resume_day
+                     SET prix_kg = {$prixKg}, prix_kwh = {$prixKwhSql}
+                     WHERE jour = '{$r->jour}'"
+                );
+                $rowsPrix++;
+            }
+        }
+
+        $elapsed = round(microtime(true) - $start, 2);
+
+        $this->sendResponse([
+            'response'  => true,
+            'rows'      => $rowsCumul,
+            'rows_prix' => $rowsPrix,
+            'lots'      => count($lots),
+            'pci'       => $pci,
+            'rendement' => $rendement,
+            'elapsed'   => $elapsed,
+        ]);
+    }
+
+    /**
+     * Génère un nouveau token API et le persiste dans config.php.
+     *
+     * @return json response=true, token=12 premiers caractères du nouveau token
+     */
+    public function regenerateToken()
+    {
+        $newToken   = sha1(uniqid('', true));
+        $configFile = file_get_contents(CONTEXT . '/config.php');
+        $configFile = preg_replace(
+            "/DEFINE\('TOKEN','[a-f0-9]+'\);/",
+            "DEFINE('TOKEN','" . $newToken . "');",
+            $configFile
+        );
+
+        $ok = file_put_contents(CONTEXT . '/config.php', $configFile);
+
+        $this->sendResponse([
+            'response' => (bool) $ok,
+            'token'    => substr($newToken, 0, 12),
+        ]);
+    }
+
+    /**
+     * Récupère la liste des fichiers CSV disponibles sur la chaudière V3 (scraping HTML).
+     *
+     * @return json liste des fichiers CSV
+     */
+    public function getFileFromChaudiere_v3()
     {
         $r['response'] = true;
 
@@ -111,7 +247,7 @@ class administration extends connectDb
                     $t_href,
                     [
                         'file' => trim(str_replace(URL.'/', '', $href)),
-                        'url' => 'http://'.CHAUDIERE.$href,
+                        'url'  => 'http://'.CHAUDIERE.$href,
                     ]
                 );
             }
@@ -119,6 +255,138 @@ class administration extends connectDb
         $r['listefiles'] = $t_href;
 
         $this->sendResponse($r);
+    }
+
+    /**
+     * Récupère la liste des 4 fichiers log disponibles sur la chaudière V4 (API JSON).
+     * Lit log0 pour extraire la date de début, puis calcule log0–log3.
+     *
+     * @return json liste des fichiers log
+     */
+    public function getFileFromChaudiere()
+    {
+        $ch = curl_init('http://'.CHAUDIERE.':'.PORT_JSON.'/'.PASSWORD_JSON.'/log0');
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+        $csv = curl_exec($ch);
+        curl_close($ch);
+
+        if (!$csv) {
+            $this->sendResponse(['response' => false]);
+            return;
+        }
+
+        $csv = mb_convert_encoding($csv, 'UTF-8', 'ISO-8859-1');
+
+        ini_set('auto_detect_line_endings', true);
+        $rows = str_getcsv($csv, "\n");
+        $firstData = isset($rows[1]) ? str_getcsv($rows[1], ';') : null;
+
+        if (!$firstData || empty($firstData[0])) {
+            $this->sendResponse(['response' => false]);
+            return;
+        }
+
+        $dateParts = explode('.', $firstData[0]); // format DD.MM.YYYY
+        if (count($dateParts) < 3) {
+            $this->sendResponse(['response' => false]);
+            return;
+        }
+
+        $baseDate = $dateParts[2].'-'.$dateParts[1].'-'.$dateParts[0]; // YYYY-MM-DD
+
+        $t_href = [];
+        for ($i = 0; $i < 4; $i++) {
+            $logDate = date('Ymd', strtotime($baseDate.' +'.$i.' day'));
+            $t_href[] = [
+                'file' => 'log'.$i.' : touch_'.$logDate.'.csv',
+                'url'  => 'http://'.CHAUDIERE.':'.PORT_JSON.'/'.PASSWORD_JSON.'/log'.$i,
+            ];
+        }
+
+        $this->sendResponse([
+            'response'   => true,
+            'listefiles' => $t_href,
+        ]);
+    }
+
+    /**
+     * Liste les pièces jointes CSV disponibles dans la boîte mail IMAP configurée.
+     *
+     * @return json liste des fichiers CSV présents dans les emails
+     */
+    public function getFileFromMailBox()
+    {
+        if (!function_exists('imap_open')) {
+            $this->sendResponse(['response' => false, 'error' => 'Extension PHP IMAP non disponible']);
+            return;
+        }
+
+        $imapConn = imap_open(URL_MAIL, LOGIN_MAIL, PASSWORD_MAIL);
+
+        if (!$imapConn) {
+            $this->sendResponse(['response' => false, 'error' => imap_last_error()]);
+            return;
+        }
+
+        $emails = imap_search($imapConn, 'ALL');
+
+        if (!$emails) {
+            imap_close($imapConn);
+            $this->sendResponse(['response' => 'noMail', 'listefiles' => []]);
+            return;
+        }
+
+        $t_href = [];
+
+        foreach ($emails as $emailNumber) {
+            $structure = imap_fetchstructure($imapConn, $emailNumber);
+
+            if (!isset($structure->parts) || !count($structure->parts)) {
+                continue;
+            }
+
+            for ($i = 0; $i < count($structure->parts); $i++) {
+                $part       = $structure->parts[$i];
+                $isAttach   = false;
+                $attachName = '';
+
+                if ($part->ifdparameters) {
+                    foreach ($part->dparameters as $obj) {
+                        if (strtolower($obj->attribute) === 'filename') {
+                            $isAttach   = true;
+                            $attachName = $obj->value;
+                        }
+                    }
+                }
+
+                if ($part->ifparameters) {
+                    foreach ($part->parameters as $obj) {
+                        if (strtolower($obj->attribute) === 'name') {
+                            $isAttach   = true;
+                            $attachName = $obj->value;
+                        }
+                    }
+                }
+
+                if ($isAttach && $attachName !== '') {
+                    $ext = strtolower(pathinfo($attachName, PATHINFO_EXTENSION));
+                    if ($ext === 'csv') {
+                        $t_href[] = [
+                            'file'        => $attachName,
+                            'emailNumber' => $emailNumber,
+                        ];
+                    }
+                }
+            }
+        }
+
+        imap_close($imapConn);
+
+        $this->sendResponse([
+            'response'   => true,
+            'listefiles' => $t_href,
+        ]);
     }
 
     /**
