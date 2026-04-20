@@ -92,25 +92,36 @@ class okofen extends connectDb
     }
 
     // integration du fichier csv dans okovision
-    //V1.3.0
+    //V1.3.0 — Batch INSERT (col_startCycle = NULL, recalculé par recalcStartCycleForDay)
     public function csv2bdd()
     {
         ini_set('max_execution_time', 120);
         $t = new timeExec();
 
         $ob_capteur = new capteur();
-        $capteurs = $ob_capteur->getForImportCsv(); //l'index du tableau correspond a la colonne du capteur dans le fichier csv
-        $capteurStatus = $ob_capteur->getByType('status');
+        $capteurs   = $ob_capteur->getForImportCsv(); //l'index du tableau correspond à la colonne du capteur dans le fichier csv
         $startCycle = $ob_capteur->getByType('startCycle');
         unset($ob_capteur);
 
-        $file = fopen(CSVFILE, 'r');
-        $ln = 0;
-        $old_status = 0;
-        $start_cycle = 0;
+        $file     = fopen(CSVFILE, 'r');
+        $ln       = 0;
         $nbColCsv = count($capteurs);
 
-        $insert = 'INSERT IGNORE INTO oko_historique_full SET ';
+        // Build column list once — fixed order: jour, heure, timestamp, col_startCycle, then sensor cols.
+        // col_startCycle est toujours inséré à NULL : recalcStartCycleForDay() recalcule les fronts
+        // montants depuis la BDD après import, évitant le problème $old_status=0 à chaque appel cron.
+        $startCycleCol = 'col_'.$startCycle['column_oko'];
+        $colNames      = ['jour', 'heure', 'timestamp', $startCycleCol];
+        for ($i = 2; $i <= $nbColCsv; ++$i) {
+            $col = 'col_'.$capteurs[$i]['column_oko'];
+            if ($col === $startCycleCol) {
+                continue; // déjà ajouté explicitement ci-dessus — évite "Column specified twice"
+            }
+            $colNames[] = $col;
+        }
+        $columnList = implode(', ', $colNames);
+        $valueRows  = [];
+
         while (!feof($file)) {
             $ligne = fgets($file);
             //ne pas prendre en compte la derniere colonne vide
@@ -120,7 +131,7 @@ class okofen extends connectDb
                 $colCsv = explode(CSV_SEPARATEUR, $ligne);
 
                 if (isset($colCsv[1])) { //test si ligne non vide
-                    $jour = $colCsv[0];
+                    $jour  = $colCsv[0];
                     $heure = $colCsv[1];
 
                     // Round to the minute, since in some cases it is possible to
@@ -128,42 +139,112 @@ class okofen extends connectDb
                     // Case of an import on the same day of the web files and the USB files
                     $heure = preg_replace('/:[0-9]{2}$/', ':00', $heure);
 
-                    $query = '';
+                    // col_startCycle = NULL à l'import ; recalcStartCycleForDay() le recalcule
+                    // correctement depuis toutes les données du jour présentes en base.
+                    $row = "(STR_TO_DATE('".$jour."','%d.%m.%Y'), '".$heure."', UNIX_TIMESTAMP(CONCAT(STR_TO_DATE('".$jour."','%d.%m.%Y'),' ','".$heure."')), NULL";
 
-                    $beginValue = "jour = STR_TO_DATE('".$jour."','%d.%m.%Y'),".		// jour
-                                    "heure = '".$heure."',".// heure
-                                    "timestamp = UNIX_TIMESTAMP(CONCAT(STR_TO_DATE('".$jour."','%d.%m.%Y'),' ','".$heure."'))"; //utc timestamp
-
-                    $query = $insert.$beginValue;
-                    //Detection demarrage d'un cycle //Statut 4 = Debut d'un cycle sur le front montant du statut
-                    if ('4' == $colCsv[$capteurStatus['position_column_csv']] && $colCsv[$capteurStatus['position_column_csv']] != $old_status) {
-                        $st = 1;
-                        //creation de la requette pour le comptage des cycle de la chaudiere
-                        //Enregistrement de 1 si nous commençons un cycle d'allumage
-                        $query .= ', col_'.$startCycle['column_oko'].'='.$st;
-                    }
-
-                    //creation de la requette sql pour les capteurs
+                    //creation des valeurs pour les capteurs
                     //on commence à la deuxieme colonne de la ligne du csv
                     for ($i = 2; $i <= $nbColCsv; ++$i) {
-                        $query .= ', col_'.$capteurs[$i]['column_oko'].'='.$this->cvtDec($colCsv[$i]);
+                        if ('col_'.$capteurs[$i]['column_oko'] === $startCycleCol) {
+                            continue; // valeur calculée par recalcStartCycleForDay(), pas lue depuis le CSV
+                        }
+                        $row .= ', '.$this->cvtDec($colCsv[$i]);
                     }
+                    $row .= ')';
+                    $valueRows[] = $row;
 
-                    $query .= ';';
-                    //execution de la requette representant l'ensemble d'un ligne du csv
-                    $this->log->debug('Class '.__CLASS__.' | '.__FUNCTION__.' | '.$query);
-
-                    $this->query($query);
-                    $old_status = $colCsv[$capteurStatus['position_column_csv']];
+                    // Exécution par lots de 500 lignes pour éviter de dépasser max_allowed_packet
+                    if (count($valueRows) >= 500) {
+                        $sql = 'INSERT IGNORE INTO oko_historique_full ('.$columnList.') VALUES '.implode(', ', $valueRows);
+                        if (!$this->query($sql)) {
+                            $this->log->error('Class '.__CLASS__.' | '.__FUNCTION__.' | Échec batch INSERT');
+                            fclose($file);
+                            return false;
+                        }
+                        $valueRows = [];
+                    }
                 }
             }
             ++$ln;
         }
         fclose($file);
 
+        // Dernier lot (< 500 lignes)
+        if (!empty($valueRows)) {
+            $sql = 'INSERT IGNORE INTO oko_historique_full ('.$columnList.') VALUES '.implode(', ', $valueRows);
+            $this->log->debug('Class '.__CLASS__.' | '.__FUNCTION__.' | batch INSERT '.count($valueRows).' lignes');
+            if (!$this->query($sql)) {
+                $this->log->error('Class '.__CLASS__.' | '.__FUNCTION__.' | Échec batch INSERT — vérifier max_allowed_packet ou schéma colonnes');
+                return false;
+            }
+        }
+
         $this->log->info('Class '.__CLASS__.' | '.__FUNCTION__.' | SUCCESS - import du CSV dans la BDD - '.$ln.' lignes en '.$t->getTime().' sec ');
 
         return true;
+    }
+
+    /**
+     * Recalcule col_startCycle pour tous les enregistrements d'un jour donné
+     * à partir des données déjà présentes en base, en détectant les fronts
+     * montants du statut 4 (début de cycle de combustion).
+     *
+     * Avantage vs. détection pendant csv2bdd() :
+     *  - ne dépend pas de $old_status=0 qui reset à chaque appel du cron
+     *  - s'applique à toutes les lignes du jour, qu'elles viennent de log0
+     *    ou de snapshots live
+     *
+     * @param string $day Format 'Y-m-d'
+     */
+    private function recalcStartCycleForDay(string $day): void
+    {
+        $ob_capteur    = new capteur();
+        $capteurStatus = $ob_capteur->getByType('status');
+        $startCycle    = $ob_capteur->getByType('startCycle');
+        $statusCol     = 'col_'.$capteurStatus['column_oko'];
+        $startCycleCol = 'col_'.$startCycle['column_oko'];
+
+        // Statut initial = dernier statut connu de la veille (évite un faux démarrage
+        // si la chaudière était déjà en combustion à minuit).
+        $prevQ      = "SELECT {$statusCol} FROM oko_historique_full
+                       WHERE jour = DATE_SUB('{$day}', INTERVAL 1 DAY)
+                       ORDER BY heure DESC LIMIT 1";
+        $prevRes    = $this->query($prevQ);
+        $prevRow    = $prevRes ? $prevRes->fetch_object() : null;
+        $prevStatus = $prevRow ? (int) $prevRow->{$statusCol} : 0;
+
+        // Lire toutes les lignes du jour dans l'ordre chronologique
+        $q   = "SELECT heure, {$statusCol} FROM oko_historique_full
+                WHERE jour = '{$day}' ORDER BY heure ASC";
+        $res = $this->query($q);
+        if (!$res) {
+            $this->log->error('Class '.__CLASS__.' | '.__FUNCTION__." | Échec lecture données pour {$day}");
+            return;
+        }
+
+        // Identifier les heures de démarrage de cycle (front montant statut → 4)
+        $cycleStartHeures = [];
+        while ($row = $res->fetch_object()) {
+            $status = (int) $row->{$statusCol};
+            if ($status === 4 && $prevStatus !== 4) {
+                $cycleStartHeures[] = $row->heure;
+            }
+            $prevStatus = $status;
+        }
+
+        // Remettre tous les col_startCycle du jour à NULL…
+        $this->query("UPDATE oko_historique_full SET {$startCycleCol} = NULL WHERE jour = '{$day}'");
+
+        // …puis marquer uniquement les fronts montants détectés
+        if (!empty($cycleStartHeures)) {
+            $inList = implode("','", $cycleStartHeures);
+            $this->query("UPDATE oko_historique_full SET {$startCycleCol} = 1
+                          WHERE jour = '{$day}' AND heure IN ('{$inList}')");
+        }
+
+        $this->log->info('Class '.__CLASS__.' | '.__FUNCTION__
+            ." | {$day} — ".count($cycleStartHeures).' démarrage(s) de cycle recalculé(s)');
     }
 
     /**
@@ -190,6 +271,9 @@ class okofen extends connectDb
         if (!$this->deleteSyntheseDay($dateChoosen)) {
             return false;
         }
+
+        // Recalcule col_startCycle depuis les données en base (indépendant du CSV)
+        $this->recalcStartCycleForDay($dateChoosen);
 
         return $this->insertSyntheseDay($dateChoosen);
     }
@@ -254,23 +338,159 @@ class okofen extends connectDb
 
     //fonction de telechargement de fichier sur internet
     // download('http://xxx','/usr/var/tmp)');
+    // Utilise cURL avec 3 tentatives espacées de 3s pour absorber
+    // le rate-limit de l'API V4 (HTTP 401 si < 2500ms entre requêtes).
     private function download($file_source, $file_target)
     {
-        $rh = fopen($file_source, 'rb');
-        $wh = fopen($file_target, 'w+b');
-        if (!$rh || !$wh) {
-            return false;
+        $maxAttempts = 3;
+        $retryDelay  = 3; // secondes
+
+        for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+            $ch = curl_init($file_source);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 20);
+            $body     = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curlErr  = curl_error($ch);
+            curl_close($ch);
+
+            if ($curlErr || $httpCode !== 200 || $body === false) {
+                if ($attempt < $maxAttempts) {
+                    sleep($retryDelay);
+                    continue;
+                }
+                return false;
+            }
+
+            $wh = fopen($file_target, 'w+b');
+            if (!$wh) {
+                return false;
+            }
+            fwrite($wh, $body);
+            fclose($wh);
+
+            return true;
         }
 
-        while (!feof($rh)) {
-            if (false === fwrite($wh, fread($rh, 4096))) {
-                return false;
+        return false;
+    }
+
+    /**
+     * Fetches current sensor values from the boiler /all? endpoint and writes
+     * a synthetic CSV row to CSVFILE so that csv2bdd() can import it.
+     * Called by cron.php to populate oko_historique_full for today in real time
+     * (the USB log file log0 is only written once at midnight by the boiler).
+     *
+     * @return bool true on success
+     */
+    public function storeLiveSnapshot(): bool
+    {
+        $url         = 'http://'.CHAUDIERE.':'.PORT_JSON.'/'.PASSWORD_JSON.'/all?';
+        $maxAttempts = 3;
+        $retryDelay  = 3;
+        $data        = null;
+
+        for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+            $ch = curl_init($url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+            $body     = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curlErr  = curl_error($ch);
+            curl_close($ch);
+
+            if ($httpCode === 200 && $body && !$curlErr) {
+                // Le firmware envoie de l'ISO-8859-1 (symboles °C cassent json_decode en UTF-8)
+                $decoded = json_decode(mb_convert_encoding($body, 'UTF-8', 'ISO-8859-1'), true);
+                if (is_array($decoded)) {
+                    $data = $decoded;
+                    break;
+                }
+                // HTTP 200 mais pas du JSON valide = message rate-limit ("Wait at least 2500ms…")
+                $this->log->info('Class '.__CLASS__.' | '.__FUNCTION__.' | Tentative '.$attempt.' — réponse non-JSON : '.substr($body, 0, 60));
+            } else {
+                $this->log->info('Class '.__CLASS__.' | '.__FUNCTION__.' | Tentative '.$attempt.' — HTTP '.$httpCode.' err='.$curlErr);
+            }
+
+            if ($attempt < $maxAttempts) {
+                sleep($retryDelay);
             }
         }
 
-        fclose($rh);
-        fclose($wh);
+        if (!$data) {
+            $this->log->error('Class '.__CLASS__.' | '.__FUNCTION__.' | /all? non disponible après '.$maxAttempts.' tentatives');
+            return false;
+        }
 
+        // Helpers
+        $gv  = function (array $section, string $key): float {
+            return isset($section[$key]['val']) ? (float) $section[$key]['val'] : 0.0;
+        };
+        $fmt = function (float $v, int $decimals = 1): string {
+            return number_format($v, $decimals, CSV_DECIMAL, '');
+        };
+        $int = function (float $v): int { return (int) round($v); };
+
+        $sys = $data['system'] ?? [];
+        $hk1 = $data['hk1']   ?? [];
+        $pe1 = $data['pe1']   ?? [];
+
+        $now   = new \DateTime();
+        $datum = $now->format('d.m.Y');
+        $zeit  = $now->format('H:i:00'); // secondes arrondies à :00 (cohérent avec csv2bdd)
+
+        $at = $fmt($gv($sys, 'L_ambient') * 0.1);
+
+        // Tableau ordonné — colonnes 0..49 correspondant à matrice.csv
+        $cols = [
+            $datum,                                                     // 0  Datum
+            $zeit,                                                      // 1  Zeit
+            $at,                                                        // 2  AT [°C]
+            $at,                                                        // 3  ATakt [°C]  (même capteur)
+            $int($gv($pe1, 'L_br')),                                   // 4  PE1_BR1
+            $fmt($gv($hk1, 'L_flowtemp_act') * 0.1),                  // 5  HK1 VL Ist
+            $fmt($gv($hk1, 'L_flowtemp_set') * 0.1),                  // 6  HK1 VL Soll
+            $fmt($gv($hk1, 'L_roomtemp_act') * 0.1),                  // 7  HK1 RT Ist
+            $fmt($gv($hk1, 'L_roomtemp_set') * 0.1),                  // 8  HK1 RT Soll
+            $int($gv($hk1, 'L_pump')),                                  // 9  HK1 Pumpe
+            0,                                                          // 10 HK1 Mischer (absent de /all?)
+            $fmt(0.0),                                                  // 11 HK1 Fernb
+            $int($gv($hk1, 'L_state')),                                 // 12 HK1 Status
+            $fmt($gv($pe1, 'L_temp_act') * 0.1),                       // 13 PE1 KT
+            $fmt($gv($pe1, 'L_temp_set') * 0.1),                       // 14 PE1 KT_SOLL
+            $fmt($gv($pe1, 'L_uw_release') * 0.1),                     // 15 PE1 UW Freigabe
+            $int($gv($pe1, 'L_modulation')),                            // 16 PE1 Modulation
+            $fmt($gv($pe1, 'L_frt_temp_act') * 0.1),                   // 17 PE1 FRT Ist
+            $fmt($gv($pe1, 'L_frt_temp_set') * 0.1),                   // 18 PE1 FRT Soll
+            $fmt($gv($pe1, 'L_frt_temp_end') * 0.1),                   // 19 PE1 FRT End
+            $fmt($gv($pe1, 'L_runtimeburner') * 0.01, 2),              // 20 PE1 Einschublaufzeit [zs]
+            $fmt($gv($pe1, 'L_resttimeburner') * 0.01, 2),             // 21 PE1 Pausenzeit [zs]
+            $int($gv($pe1, 'L_currentairflow')),                        // 22 PE1 Luefterdrehzahl
+            $int($gv($pe1, 'L_fluegas')),                               // 23 PE1 Saugzugdrehzahl
+            $fmt($gv($pe1, 'L_lowpressure') * 0.1),                    // 24 PE1 Unterdruck Ist
+            $fmt($gv($pe1, 'L_lowpressure_set') * 0.1),                // 25 PE1 Unterdruck Soll
+            $int($gv($pe1, 'L_storage_fill')),                          // 26 PE1 Fuellstand [kg]
+            $int($gv($pe1, 'L_storage_popper')),                        // 27 PE1 Fuellstand ZWB [kg]
+            $int($gv($pe1, 'L_state')),                                 // 28 PE1 Status
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,                          // 29-39 Motor states (absent de /all?)
+            $fmt(0.0),                                                  // 40 PE1 Res1 Temp.
+            0, 0,                                                       // 41-42 PE1 CAP RA/ZB
+            $int($gv($pe1, 'L_ak')),                                    // 43 PE1 AK
+            0,                                                          // 44 PE1 Saug-Int
+            1, 0,                                                       // 45 DigIn1, 46 DigIn2
+            0, 0, 0,                                                    // 47-49 Fehler1-3
+        ];
+
+        $header  = 'Datum ;Zeit ;AT [°C];ATakt [°C];PE1_BR1 ;HK1 VL Ist[°C];HK1 VL Soll[°C];HK1 RT Ist[°C];HK1 RT Soll[°C];HK1 Pumpe;HK1 Mischer;HK1 Fernb[°C];HK1 Status;PE1 KT[°C];PE1 KT_SOLL[°C];PE1 UW Freigabe[°C];PE1 Modulation[%];PE1 FRT Ist[°C];PE1 FRT Soll[°C];PE1 FRT End[°C];PE1 Einschublaufzeit[zs];PE1 Pausenzeit[zs];PE1 Luefterdrehzahl[%];PE1 Saugzugdrehzahl[%];PE1 Unterdruck Ist[EH];PE1 Unterdruck Soll[EH];PE1 Fuellstand[kg];PE1 Fuellstand ZWB[kg];PE1 Status;PE1 Motor ES;PE1 Motor RA;PE1 Motor RES1;PE1 Motor TURBINE;PE1 Motor ZUEND;PE1 Motor UW[%];PE1 Motor AV;PE1 Motor RES2;PE1 Motor MA;PE1 Motor RM;PE1 Motor SM;PE1 Res1 Temp.[°C];PE1 CAP RA;PE1 CAP ZB;PE1 AK;PE1 Saug-Int[min];PE1 DigIn1;PE1 DigIn2;Fehler1 ;Fehler2 ;Fehler3 ;';
+        $dataRow = implode(';', $cols).';';
+
+        if (false === file_put_contents(CSVFILE, $header."\n".$dataRow."\n")) {
+            $this->log->error('Class '.__CLASS__.' | '.__FUNCTION__.' | Écriture CSVFILE impossible');
+            return false;
+        }
+
+        $this->log->info('Class '.__CLASS__.' | '.__FUNCTION__.' | Snapshot live écrit ('.$datum.' '.$zeit.')');
         return true;
     }
 
@@ -310,21 +530,69 @@ class okofen extends connectDb
 
     private function insertSyntheseDay($day)
     {
-        $query = 'INSERT INTO oko_resume_day ( jour, tc_ext_max, tc_ext_min, conso_kg, conso_ecs_kg, dju, nb_cycle ) VALUE ';
-
-        $rendu = new rendu();
-        $max = $rendu->getTcMaxByDay($day);
-        $min = $rendu->getTcMinByDay($day);
-        $conso = $rendu->getConsoByday($day);
+        $rendu     = new rendu();
+        $max       = $rendu->getTcMaxByDay($day);
+        $min       = $rendu->getTcMinByDay($day);
+        $conso     = $rendu->getConsoByday($day);
         $conso_ecs = $rendu->getConsoByday($day, null, null, 'hotwater');
-        $dju = $rendu->getDju($max->tcExtMax, $min->tcExtMin);
-        $cycle = $rendu->getNbCycleByDay($day);
+        $dju       = $rendu->getDju($max->tcExtMax, $min->tcExtMin);
+        $cycle     = $rendu->getNbCycleByDay($day);
 
-        $consoPellet = (null === $conso->consoPellet) ? 0 : $conso->consoPellet;
-        $consoEcsPellet = (null === $conso_ecs->consoPellet) ? 0 : $conso_ecs->consoPellet;
-        $nbCycle = (null === $cycle->nbCycle) ? 0 : $cycle->nbCycle;
+        $consoPellet    = (null === $conso->consoPellet)     ? 0 : (float) $conso->consoPellet;
+        $consoEcsPellet = (null === $conso_ecs->consoPellet) ? 0 : (float) $conso_ecs->consoPellet;
+        $nbCycle        = (null === $cycle->nbCycle)         ? 0 : (int) $cycle->nbCycle;
+        $consoKwh       = round($consoPellet * PCI_PELLET * (RENDEMENT_CHAUDIERE / 100), 2);
 
-        $query .= "('".$day."', ".$max->tcExtMax.', '.$min->tcExtMin.', '.$consoPellet.', '.$consoEcsPellet.', '.$dju.', '.$nbCycle.' );';
+        /* ── Cumulatifs (cumul du jour précédent + valeurs du jour) ── */
+        $prevQ = "SELECT IFNULL(cumul_kg, 0) AS c_kg, IFNULL(cumul_kwh, 0) AS c_kwh,
+                         IFNULL(cumul_cycle, 0) AS c_cycle
+                  FROM oko_resume_day WHERE jour < '{$day}' ORDER BY jour DESC LIMIT 1";
+        $prevR = $this->query($prevQ);
+        $prev  = $prevR ? $prevR->fetch_object() : null;
+
+        $cumulKg    = round(($prev ? (float) $prev->c_kg    : 0) + $consoPellet, 2);
+        $cumulKwh   = round(($prev ? (float) $prev->c_kwh   : 0) + $consoKwh,   2);
+        $cumulCycle = ($prev ? (int) $prev->c_cycle : 0) + $nbCycle;
+
+        /* ── Prix au kg – logique FIFO sur les livraisons PELLET ── */
+        $prixKgQ = "SELECT ROUND(e.price / e.quantity, 4) AS prix_kg
+                    FROM (
+                        SELECT e1.price, e1.quantity,
+                               (SELECT SUM(e2.quantity) FROM oko_silo_events e2
+                                WHERE e2.event_type='PELLET' AND e2.event_date <= e1.event_date
+                               ) AS cumul_livraison
+                        FROM oko_silo_events e1
+                        WHERE e1.event_type = 'PELLET' AND e1.quantity > 0
+                    ) e
+                    WHERE e.cumul_livraison >= {$cumulKg}
+                    ORDER BY e.cumul_livraison ASC
+                    LIMIT 1";
+        $prixKgR   = $this->query($prixKgQ);
+        $prixKgRow = $prixKgR ? $prixKgR->fetch_object() : null;
+
+        if (!$prixKgRow) {
+            // Fallback : conso cumulée dépasse toutes les livraisons connues → dernier lot
+            $lastQ     = "SELECT ROUND(price / quantity, 4) AS prix_kg
+                          FROM oko_silo_events
+                          WHERE event_type='PELLET' AND quantity > 0
+                          ORDER BY event_date DESC LIMIT 1";
+            $lastR     = $this->query($lastQ);
+            $prixKgRow = $lastR ? $lastR->fetch_object() : null;
+        }
+
+        $prixKg       = $prixKgRow ? (float) $prixKgRow->prix_kg : null;
+        $energieParKg = PCI_PELLET * RENDEMENT_CHAUDIERE / 100;
+        $prixKwh      = ($prixKg !== null && $energieParKg > 0) ? round($prixKg / $energieParKg, 4) : null;
+
+        $prixKgSql  = ($prixKg  !== null) ? $prixKg  : 'NULL';
+        $prixKwhSql = ($prixKwh !== null) ? $prixKwh : 'NULL';
+
+        /* ── INSERT ── */
+        $query  = 'INSERT INTO oko_resume_day ';
+        $query .= '( jour, tc_ext_max, tc_ext_min, conso_kg, conso_ecs_kg, conso_kwh, ';
+        $query .= '  cumul_kg, cumul_kwh, cumul_cycle, prix_kg, prix_kwh, dju, nb_cycle ) VALUE ';
+        $query .= "('{$day}', {$max->tcExtMax}, {$min->tcExtMin}, {$consoPellet}, {$consoEcsPellet}, {$consoKwh}, ";
+        $query .= " {$cumulKg}, {$cumulKwh}, {$cumulCycle}, {$prixKgSql}, {$prixKwhSql}, {$dju}, {$nbCycle} );";
 
         $this->log->debug('Class '.__CLASS__.' | '.__FUNCTION__.' | '.$query);
 
