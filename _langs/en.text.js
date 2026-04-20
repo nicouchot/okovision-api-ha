@@ -2,10 +2,18 @@ var lang = {
     error:{
         communication: 'Communication problems',
         getFileFromBoiler: 'Unable to retrieve the files on the boiler',
+        getFileFromMailBox: 'Unable to retrieve the files on the mailBox',
         maj: 'Update failed',
         csvImport: "Import failed",
+        noSelect: "Please, select a file",
+        delMail: "Delete error",
         summary: 'Unprocessed synthesis',
         ipNotPing: "Ip address is not responding",
+        noMail: "No mail in mailBox",
+        mailboxDontRespond: "No response from mailBox",
+        portNotRespond: "JSON port is not boiler's port",
+        tooldfirmware: "Boiler firmware is lower than V4",
+        badpwd: "MailBox password error",
         configNotSave: 'Configuration not saved',
         csvNotFound: "Reference CSV file not found",
         getSeasons: 'Recovering seasons problem',
@@ -53,7 +61,8 @@ var lang = {
         save: 'recording completed',
         update: 'Successful update',
         delete: 'Successful deletion',
-        applyConfigboiler: 'Configuration applied to the boiler'
+        applyConfigboiler: 'Configuration applied to the boiler',
+        delMail: "Successful delete"
     },
     text:{
         seeFileOnboiler: 'View Boiler files',
@@ -81,7 +90,8 @@ var lang = {
         estimationReliability: "Estimate based on historical consumption. Reliability : {0}%",
         no_silo_size: 'To know the filling status of your storagoe tank, please enter its capacity <a href="adminParam.php">in parameters</a>',
         no_fill_date_for_silo: 'To know you storage tank store state, please define <a href="adminEvents.php">the last filling</a>',
-        updateAvailable: 'A new version is available ! go to About page !'
+        updateAvailable: 'A new version is available ! go to About page !',
+        importAll: "Import all"
     },
     graphic:{
         thousandsSep: ' ',
@@ -97,6 +107,12 @@ var lang = {
         nbCycle: 'Cycle nb',
         seasonSummary: "Season summary",
         loading : 'Loading data from boiler...'
+    },
+    mode:{
+        off: 'Off',
+        vac: 'Vacancy',
+        red: 'Reduce',
+        conf: 'Comfort'
     }
 };
     

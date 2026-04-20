@@ -2,10 +2,18 @@ var lang = {
     error:{
         communication: 'Problème de communication',
         getFileFromBoiler: 'Impossible de récupérer les fichiers présents sur la chaudière',
+        getFileFromMailBox: 'Impossible de récupérer les fichiers présents sur la boite mail',
         maj: 'Echec de la mise à jour',
         csvImport: "Echec de l'importation",
         summary: 'Synthèse non traitée',
+        noSelect: "Selectionnez au moins un fichier",
+        delMail: "Erreur lors de la suppression",
         ipNotPing: "L'adresse Ip ne repond pas",
+        noMail: "Pas de mail dans la boite",
+        mailboxDontRespond: "La boite mail ne répond pas",
+        portNotRespond: "Le port JSON indiqué n'est pas celui de la chaudière",
+        tooldfirmware: "Le firmware de la chaudière est inferieur à la V4",
+        badpwd: "Mot de passe erroné",
         configNotSave: 'Configuration non sauvegardée',
         csvNotFound: "Le fichier CSV de référence n'a pas été trouvé",
         getSeasons: 'Problème lors de la récupération des saisons',
@@ -53,7 +61,8 @@ var lang = {
         save: 'Enregistrement réussi',
         update: 'Mise à jour réussie',
         delete: 'Suppression réussie',
-        applyConfigboiler: 'Configuration appliquée sur la chaudière'
+        applyConfigboiler: 'Configuration appliquée sur la chaudière',
+        delMail: "Suppression effectuée"
     },
     text:{
         seeFileOnboiler: 'Visualiser les fichiers sur la chaudière',
@@ -81,7 +90,8 @@ var lang = {
         estimationReliability: "Estimation basée sur l'historique des consommations. Fiabilité : {0}%",
         no_silo_size: 'Pour connaître le statut de remplissage de votre silo, veuillez renseigner sa contenance <a href="adminParam.php">dans les informations générales</a>',
         no_fill_date_for_silo: 'Pour connaître l\'état de votre stock de pellet, veuillez renseigner <a href="adminEvents.php">les informations du dernier remplissage</a>',
-        updateAvailable: 'Une nouvelle version est disponible, cliquez ici'
+        updateAvailable: 'Une nouvelle version est disponible, cliquez ici',
+        importAll: "Tout Importer"
     },
     graphic:{
         thousandsSep: ' ',
@@ -97,6 +107,12 @@ var lang = {
         nbCycle: 'Nb Cycle',
         seasonSummary: "Synthèse Saison",
         loading : 'Loading data from boiler...'
+    },
+    mode:{
+        off: 'Arrêt',
+        vac: 'Vacances',
+        red: 'Réduit',
+        conf: 'Confort'
     }
     /*,
     sensor:{

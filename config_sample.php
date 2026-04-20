@@ -50,8 +50,18 @@ DEFINE('FTP_SERVEUR', '###_FTP_SERVEUR_###');
 DEFINE('FTP_USER', '###_FTP_USER_###'); 
 DEFINE('FTP_PASS', '###_FTP_PASS_###');
 DEFINE('REP_DEPOT', '###_FTP_DEPOT_###');
-// Activation/Desctivation de la recuperation du fichier sur la chaudiere
-DEFINE('GET_CHAUDIERE_DATA_BY_IP', ($config['get_data_from_chaudiere']==1)?true:false); // default -> true //json
+// Mode de récupération des données chaudière : 0=USB, 1=IP V3, 2=JSON V4
+DEFINE('GET_CHAUDIERE_DATA_BY_IP', (int)($config['get_data_from_chaudiere'] ?? 0)); // default -> 0 //json
+// V4 JSON API (firmware >= 4.00b)
+DEFINE('PORT_JSON',       $config['port_json']       ?? '');
+DEFINE('PASSWORD_JSON',   $config['password_json']   ?? '');
+// V4 Mail IMAP
+DEFINE('URL_MAIL',        $config['url_mail']        ?? '');
+DEFINE('LOGIN_MAIL',      $config['login_mail']      ?? '');
+DEFINE('PASSWORD_MAIL',   $config['password_mail']   ?? '');
+// Paramètres énergétiques pellet
+DEFINE('PCI_PELLET',              (float)($config['pci_pellet']              ?? 4.90));
+DEFINE('RENDEMENT_CHAUDIERE',     (float)($config['rendement_chaudiere']     ?? 89.50));
 // Activation/Desctivation du transfert du fichier de la chaudiere vers une autre serveur en + de celui hebergeant l'application.
 DEFINE('SEND_TO_WEB', ($config['send_to_web']==1)?true:false); // default -> false //json
 //
