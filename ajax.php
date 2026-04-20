@@ -39,7 +39,24 @@ if (is_ajax() && is_valid()) {
 
                             break;
                         case 'getFileFromChaudiere':
-                            $a->getFileFromChaudiere();
+                            // Dispatcher selon le mode de connexion configuré
+                            if (GET_CHAUDIERE_DATA_BY_IP === 2) {
+                                $a->getFileFromChaudiere();   // V4 JSON
+                            } else {
+                                $a->getFileFromChaudiere_v3(); // V3 scraping HTML
+                            }
+
+                            break;
+                        case 'getFileFromMailBox':
+                            $a->getFileFromMailBox();
+
+                            break;
+                        case 'regenerateToken':
+                            $a->regenerateToken();
+
+                            break;
+                        case 'recalcHistorique':
+                            $a->recalcHistorique();
 
                             break;
                         case 'importFileFromChaudiere':
