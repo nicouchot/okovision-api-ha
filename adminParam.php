@@ -30,15 +30,15 @@
     					  <div class="col-md-3">
     					    <select id="oko_typeconnect" name="oko_typeconnect" class="form-control">
     					        <option value="0">USB</option>
-    			                <option value="1" <?php if (GET_CHAUDIERE_DATA_BY_IP === 1) { echo 'selected=selected'; } ?>>IP</option>
-    			                <option value="2" <?php if (GET_CHAUDIERE_DATA_BY_IP === 2) { echo 'selected=selected'; } ?>>IP via Json (firmware v4.00b)</option>
+    			                <option value="1" <?php if ((int)($config['get_data_from_chaudiere'] ?? 0) === 1) { echo 'selected=selected'; } ?>>IP</option>
+    			                <option value="2" <?php if ((int)($config['get_data_from_chaudiere'] ?? 0) === 2) { echo 'selected=selected'; } ?>>IP via Json (firmware v4.00b)</option>
     					    </select>
     					  </div>
 
     					</div>
 
                         <!-- Text input-->
-                        <div class="form-group" id="form-ip" <?php if (GET_CHAUDIERE_DATA_BY_IP < 1) {
+                        <div class="form-group" id="form-ip" <?php if ((int)($config['get_data_from_chaudiere'] ?? 0) < 1) {
     echo 'style="display: none;"';
 } ?>>
                             <label class="col-md-4 control-label" for="oko_ip"><?php echo session::getInstance()->getLabel('lang.text.page.admin.boilerip'); ?></label>  
@@ -54,18 +54,18 @@
     					</div>
     				
                         <!-- JSON V4 port -->
-                        <div class="form-group" id="form-json-port" <?php if (GET_CHAUDIERE_DATA_BY_IP !== 2) { echo 'style="display: none;"'; } ?>>
+                        <div class="form-group" id="form-json-port" <?php if ((int)($config['get_data_from_chaudiere'] ?? 0) !== 2) { echo 'style="display: none;"'; } ?>>
                             <label class="col-md-4 control-label" for="oko_json_port"><?php echo session::getInstance()->getLabel('lang.text.page.admin.boilerjsonport'); ?></label>
                             <div class="col-md-3">
-                                <input id="oko_json_port" name="oko_json_port" type="text" class="form-control input-md" placeholder="ex : 4444" value="<?php echo defined('PORT_JSON') ? PORT_JSON : ''; ?>">
+                                <input id="oko_json_port" name="oko_json_port" type="text" class="form-control input-md" placeholder="ex : 4444" value="<?php echo $config['port_json'] ?? ''; ?>">
                             </div>
                         </div>
 
                         <!-- JSON V4 password -->
-                        <div class="form-group" id="form-json-pwd" <?php if (GET_CHAUDIERE_DATA_BY_IP !== 2) { echo 'style="display: none;"'; } ?>>
+                        <div class="form-group" id="form-json-pwd" <?php if ((int)($config['get_data_from_chaudiere'] ?? 0) !== 2) { echo 'style="display: none;"'; } ?>>
                             <label class="col-md-4 control-label" for="oko_json_pwd"><?php echo session::getInstance()->getLabel('lang.text.page.admin.boilerjsonPWD'); ?></label>
                             <div class="col-md-3">
-                                <input id="oko_json_pwd" name="oko_json_pwd" type="text" class="form-control input-md" placeholder="ex : 1234" value="<?php echo defined('PASSWORD_JSON') ? PASSWORD_JSON : ''; ?>">
+                                <input id="oko_json_pwd" name="oko_json_pwd" type="text" class="form-control input-md" placeholder="ex : 1234" value="<?php echo $config['password_json'] ?? ''; ?>">
                             </div>
                             <div class="col-md-3">
                                 <button type="button" class="btn btn-xs btn-default" id="test_oko_json">
@@ -75,25 +75,25 @@
                         </div>
 
                         <!-- Mailbox configuration -->
-                        <div class="form-group" id="form-mail-host" <?php if (GET_CHAUDIERE_DATA_BY_IP !== 2) { echo 'style="display: none;"'; } ?>>
+                        <div class="form-group" id="form-mail-host" <?php if ((int)($config['get_data_from_chaudiere'] ?? 0) !== 2) { echo 'style="display: none;"'; } ?>>
                             <label class="col-md-4 control-label" for="mail_host"><?php echo session::getInstance()->getLabel('lang.text.page.admin.mailhost'); ?></label>
                             <div class="col-md-3">
-                                <input id="mail_host" name="mail_host" type="text" class="form-control input-md" placeholder="ex : {imap.exemple.com:993/imap/ssl}" value="<?php echo defined('URL_MAIL') ? URL_MAIL : ''; ?>">
+                                <input id="mail_host" name="mail_host" type="text" class="form-control input-md" placeholder="ex : {imap.exemple.com:993/imap/ssl}" value="<?php echo $config['url_mail'] ?? ''; ?>">
                                 <span class="help-block"><?php echo session::getInstance()->getLabel('lang.text.page.admin.mailcomm'); ?></span>
                             </div>
                         </div>
 
-                        <div class="form-group" id="form-mail-log" <?php if (GET_CHAUDIERE_DATA_BY_IP !== 2) { echo 'style="display: none;"'; } ?>>
+                        <div class="form-group" id="form-mail-log" <?php if ((int)($config['get_data_from_chaudiere'] ?? 0) !== 2) { echo 'style="display: none;"'; } ?>>
                             <label class="col-md-4 control-label" for="mail_log"><?php echo session::getInstance()->getLabel('lang.text.page.admin.maillog'); ?></label>
                             <div class="col-md-3">
-                                <input id="mail_log" name="mail_log" type="text" class="form-control input-md" placeholder="email@exemple.com" value="<?php echo defined('LOGIN_MAIL') ? LOGIN_MAIL : ''; ?>">
+                                <input id="mail_log" name="mail_log" type="text" class="form-control input-md" placeholder="email@exemple.com" value="<?php echo $config['login_mail'] ?? ''; ?>">
                             </div>
                         </div>
 
-                        <div class="form-group" id="form-mail-pwd" <?php if (GET_CHAUDIERE_DATA_BY_IP !== 2) { echo 'style="display: none;"'; } ?>>
+                        <div class="form-group" id="form-mail-pwd" <?php if ((int)($config['get_data_from_chaudiere'] ?? 0) !== 2) { echo 'style="display: none;"'; } ?>>
                             <label class="col-md-4 control-label" for="mail_pwd"><?php echo session::getInstance()->getLabel('lang.text.page.admin.mailpwd'); ?></label>
                             <div class="col-md-3">
-                                <input id="mail_pwd" name="mail_pwd" type="password" class="form-control input-md" value="<?php echo (defined('LOGIN_MAIL') && LOGIN_MAIL !== '') ? '••••••••' : ''; ?>">
+                                <input id="mail_pwd" name="mail_pwd" type="password" class="form-control input-md" value="<?php echo ($config['login_mail'] ?? '') !== '' ? '••••••••' : ''; ?>">
                             </div>
                             <div class="col-md-3">
                                 <button type="button" class="btn btn-xs btn-default" id="test_mail">
@@ -161,7 +161,7 @@
     					<div class="form-group">
     					  <label class="col-md-4 control-label" for="pci_pellet">PCI pellet (kWh/kg) :</label>
     					  <div class="col-md-3">
-    					    <input id="pci_pellet" name="pci_pellet" type="number" step="0.01" placeholder="ex : 4.90" class="form-control input-md" value="<?php echo defined('PCI_PELLET') ? PCI_PELLET : ''; ?>">
+    					    <input id="pci_pellet" name="pci_pellet" type="number" step="0.01" placeholder="ex : 4.90" class="form-control input-md" value="<?php echo $config['pci_pellet'] ?? ''; ?>">
     					  </div>
     					</div>
 
@@ -169,7 +169,7 @@
     					<div class="form-group">
     					  <label class="col-md-4 control-label" for="rendement_chaudiere">Rendement chaudière (%) :</label>
     					  <div class="col-md-3">
-    					    <input id="rendement_chaudiere" name="rendement_chaudiere" type="number" step="0.01" placeholder="ex : 89.50" class="form-control input-md" value="<?php echo defined('RENDEMENT_CHAUDIERE') ? RENDEMENT_CHAUDIERE : ''; ?>">
+    					    <input id="rendement_chaudiere" name="rendement_chaudiere" type="number" step="0.01" placeholder="ex : 89.50" class="form-control input-md" value="<?php echo $config['rendement_chaudiere'] ?? ''; ?>">
     					  </div>
     					</div>
 

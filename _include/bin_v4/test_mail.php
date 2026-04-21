@@ -12,7 +12,11 @@ if (!function_exists('imap_open')) {
     exit;
 }
 
-$conn = imap_open(URL_MAIL, LOGIN_MAIL, PASSWORD_MAIL, OP_HALFOPEN);
+$mailHost = !empty($_GET['host']) ? trim($_GET['host']) : (defined('URL_MAIL')      ? URL_MAIL      : '');
+$mailLog  = !empty($_GET['log'])  ? trim($_GET['log'])  : (defined('LOGIN_MAIL')    ? LOGIN_MAIL    : '');
+$mailPwd  = !empty($_GET['mdp'])  ? trim($_GET['mdp'])  : (defined('PASSWORD_MAIL') ? PASSWORD_MAIL : '');
+
+$conn = imap_open($mailHost, $mailLog, $mailPwd, OP_HALFOPEN);
 
 if ($conn) {
     imap_close($conn);
