@@ -21,8 +21,8 @@
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 
 		// Execute the POST request
-		$json = utf8_encode(curl_exec($ch));
-		
+		$json = mb_convert_encoding(curl_exec($ch), 'UTF-8', 'ISO-8859-1');
+
 		$resp['version'] = substr($json, strpos($json, '  V')+3, 5);
 		
 		sleep(3);
@@ -34,9 +34,9 @@
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 
 		// Execute the POST request
-		$json = utf8_encode(curl_exec($ch));
-		
-		
+		$json = mb_convert_encoding(curl_exec($ch), 'UTF-8', 'ISO-8859-1');
+
+
 		$resp['data'] = $json;
 		
 		print_r(json_encode($resp, JSON_HEX_AMP));
