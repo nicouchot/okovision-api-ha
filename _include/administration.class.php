@@ -60,6 +60,11 @@ class administration extends connectDb
 
         $param = [
             'chaudiere' => $s['oko_ip'],
+            'port_json' => $s['oko_json_port'],
+            'password_json' => $s['oko_json_pwd'],
+            'url_mail' => $s['mail_host'],
+            'login_mail' => $s['mail_log'],
+            'password_mail' => $s['mail_pwd'],
             'tc_ref' => $s['param_tcref'],
             'poids_pellet' => $s['param_poids_pellet'],
             'surface_maison' => $s['surface_maison'],
@@ -85,11 +90,11 @@ class administration extends connectDb
     }
 
     /**
-     * Get file list from boiler.
+     * Get file list from boiler (V3 firmware — scrape HTML page).
      *
      * @return json this list
      */
-    public function getFileFromChaudiere()
+    public function getFileFromChaudiere_v3()
     {
         $r['response'] = true;
 
@@ -114,6 +119,50 @@ class administration extends connectDb
                     ]
                 );
             }
+        }
+        $r['listefiles'] = $t_href;
+
+        $this->sendResponse($r);
+    }
+
+    /**
+     * Get file list from boiler (V4 firmware — JSON API).
+     *
+     * Fetches the current day's CSV (log0) from the V4 JSON endpoint,
+     * extracts the log date, and builds a list of the 4 most recent
+     * daily log URLs that the client can then import individually.
+     *
+     * @return json this list
+     */
+    public function getFileFromChaudiere()
+    {
+        $r['response'] = true;
+
+        ini_set('auto_detect_line_endings', true);
+
+        $ch = curl_init('http://'.CHAUDIERE.':'.PORT_JSON.'/'.PASSWORD_JSON.'/log0');
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        $csv = utf8_encode(curl_exec($ch));
+
+        $Data = str_getcsv($csv, "\n");
+
+        foreach ($Data as $key => $Row) {
+            $Row = str_getcsv($Row, ';');
+            $array[$key] = $Row;
+        }
+        $dateArray = explode('.', $array[1][0]);
+
+        $t_href = [];
+        for ($i = 0; $i < 4; $i++) {
+            $logDate = date('Ymd', strtotime($dateArray[2].'-'.$dateArray[1].'-'.$dateArray[0].' +'.$i.' day'));
+
+            array_push(
+                $t_href,
+                [
+                    'file' => 'log'.$i.' : touch_'.$logDate.'.csv',
+                    'url' => 'http://'.CHAUDIERE.':'.PORT_JSON.'/'.PASSWORD_JSON.'/log'.$i,
+                ]
+            );
         }
         $r['listefiles'] = $t_href;
 
