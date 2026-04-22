@@ -23,10 +23,15 @@ DEFINE('DEBUG', false); //default -> false
 DEFINE('VIEW_DEBUG', false); //default -> false
 
 //ADRESS WEB de la Chaudiere
-// exemple : 192.168.0.23 ou chaudiere ou 
-// en precisant le port 192.168.0.23:8180 => <ip>:<port>
+// exemple : 192.168.0.23
 // si hebergement exterieur et que la chaudiere est accessible via l'exterieur => toto.ddns.net ou toto.ddns.net:<port>
-DEFINE('CHAUDIERE',$config['chaudiere']); // <ip>:<port> //json
+DEFINE('CHAUDIERE',$config['chaudiere']);
+DEFINE('PORT_JSON',$config['port_json']);
+DEFINE('PASSWORD_JSON',$config['password_json']);
+//MAILBOX
+DEFINE('URL_MAIL',$config['url_mail']);
+DEFINE('LOGIN_MAIL',$config['login_mail']);
+DEFINE('PASSWORD_MAIL',$config['password_mail']);
 //BDD
 DEFINE('BDD_IP','###_BDD_IP_###'); //default -> localhost
 DEFINE('BDD_USER','###_BDD_USER_###');
