@@ -1,6 +1,6 @@
 /*****************************************************
  * Projet : Okovision - Supervision chaudiere OeKofen
- * Auteur : Stawen Dronek
+ * Auteur : Stawen Dronek mod by skydarc for V2
  * Utilisation commerciale interdite sans mon accord
  ******************************************************/
 /* global lang, $ */
@@ -15,9 +15,29 @@ $(document).ready(function() {
 		
 		if ($(this).val() == 1) {
 			$("#form-ip").show();
+			$("#div_test_oko_ip").show();
+			$("#form-json-port").hide();
+			$("#form-json-pwd").hide();
+			$("#form-mail").hide();
+		}
+		else if ($(this).val() == 2) {
+			$("#form-ip").show();
+			$("#div_test_oko_ip").hide();
+			$("#form-json-port").show();
+			$("#form-json-pwd").show();
+			$("#form-mail").show();
 		}
 		else {
 			$("#form-ip").hide();
+			$("#div_test_oko_ip").hide();
+			$("#form-json-port").hide();
+			$("#form-json-pwd").hide();
+			$("#form-mail").hide();
+		}
+		if (val === 2) {
+			$("#form-json-port, #form-json-pwd").show();
+		} else {
+			$("#form-json-port, #form-json-pwd").hide();
 		}
 	});
 
@@ -31,8 +51,9 @@ $(document).ready(function() {
 		$.api('GET', 'admin.testIp', {
 			ip: ip
 		}).done(function(json) {
-
+			
 			if (json.response) {
+				
 				$('#url_csv').html("");
 				$.growlValidate(lang.valid.communication);
 				$('#url_csv').append('<a target="_blank" href="' + json.url + '">' + lang.text.seeFileOnboiler + '</a>');
@@ -48,7 +69,44 @@ $(document).ready(function() {
 		}
 		*/
 	});
-        
+	
+	$('#test_oko_json').click(function() {
+
+
+		var mdp  = $('#oko_json_pwd').val();
+
+		$.get('_include/bin_v4/get_softVersion.php', { ip: ip, port: port, mdp: mdp })
+			.done(function(raw) {
+				var json;
+				try { json = (typeof raw === 'string') ? JSON.parse(raw) : raw; } catch(e) { $.growlWarning(lang.error.portNotRespond); return; }
+
+				if (!json || !json.version) { $.growlWarning(lang.error.portNotRespond); return; }
+
+				var ver = parseFloat(json.version);
+				if (isNaN(ver)) { $.growlWarning(lang.error.portNotRespond); return; }
+				if (ver < 4) { $.growlWarning(lang.error.tooldfirmware); return; }
+
+				$.growlValidate(lang.valid.communication + ' — firmware ' + json.version);
+			})
+			.fail(function() { $.growlWarning(lang.error.portNotRespond); });
+	});
+
+	$('#test_mail').click(function() {
+		var host = $('#mail_host').val();
+		var log  = $('#mail_log').val();
+		var mdp  = $('#mail_pwd').val();
+
+		$.get('_include/bin_v4/test_mail.php', { host: host, login: log, mdp: mdp })
+			.done(function(raw) {
+				if (raw === 'success') {
+					$.growlValidate(lang.valid.communication);
+				} else {
+					$.growlWarning(lang.error.mailboxDontRespond);
+				}
+			})
+			.fail(function() { $.growlWarning(lang.error.mailboxDontRespond); });
+	});
+
 	$("#oko_loadingmode").change(function() {
 
 		if ($(this).val() == 1) {
@@ -63,6 +121,11 @@ $(document).ready(function() {
 
 		var tab = {
 			oko_ip: $('#oko_ip').val(),
+			oko_json_port: $('#oko_json_port').val(),
+			oko_json_pwd: $('#oko_json_pwd').val(),
+			mail_host: $('#mail_host').val(),
+			mail_log: $('#mail_log').val(),
+			mail_pwd: $('#mail_pwd').val(),
 			param_tcref: $('#param_tcref').val(),
 			param_poids_pellet: $('#param_poids_pellet').val(),
 			surface_maison: $('#surface_maison').val(),

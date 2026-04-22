@@ -24,7 +24,13 @@ if (!file_exists('config.php')) {
 		<img style='float:left;width:130px;height:130px; margin-right:20px;' src="css/images/stawen.png" alt="stawen" class="img-circle">
 
 		<?php echo session::getInstance()->getLabel('lang.text.page.about.information'); ?>
-		
+
+		<p style="clear:both; padding-top:10px;">
+			V4 firmware support initially ported from
+			<a href="https://github.com/skydarc/okovision_v2" target="_blank" rel="noopener">skydarc/okovision_v2</a>
+			(may 2022). Current fork :
+			<a href="https://github.com/nicouchot/okovision-ha-api" target="_blank" rel="noopener">nicouchot/okovision-ha-api</a>.
+		</p>
 	</div>
 	<div>TOKEN API : <?php echo substr(TOKEN, 0, 12); ?></div>
 	<div class="page-header">

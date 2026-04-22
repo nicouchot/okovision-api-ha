@@ -1,5 +1,18 @@
 ## Unrealised
 
+## 2.0.0 — 2026-04-22 — Migration V4 (rapatriement skydarc/okovision_v2)
+
+Support du firmware OkoFen V4 (API JSON), dashboard temps réel dédié, et import CSV via mail IMAP. Les apports viennent du fork [skydarc/okovision_v2](https://github.com/skydarc/okovision_v2) (mai 2022), rapatriés phase par phase sur ce fork.
+
+- **Phase 0** (`v2.0.0-alpha.0`) : socle config (5 constantes `PORT_JSON`, `PASSWORD_JSON`, `URL_MAIL`, `LOGIN_MAIL`, `PASSWORD_MAIL`) + i18n EN/FR pour V4 et mail.
+- **Phase 1** (`v2.0.0-alpha.1`) : cœur V4 — méthodes JSON dans `administration.class.php` (IP hardcodée supprimée, utilisation des constantes) + 8 scripts `_include/bin_v4/*` (test boiler/mail, download CSV, list/delete mail, config capteurs).
+- **Phase 2** (`v2.0.0-alpha.2`) : UI admin V4 — formulaires JSON et mail dans `setup.php` / `adminParam.php`, routage V3/V4 dans le menu, page `amImpMail.php` (version provisoire).
+- **Phase 3** (`v2.0.0-alpha.3`) : dashboard temps réel V4 (`rt_v4.php`, `js/rt_v4.js`) + classes CSS V4. Note : Highcharts non branché (à intégrer séparément).
+- **Phase 4** (`v2.0.0-beta.1`) : docs (README, changelog, about) + crédit skydarc.
+- **Phase 5** (`v2.0.0-rc.1`) : cherry-pick de la reconstruction propre de l'import mail (remplace la version provisoire rapatriée en phases 1-2).
+
+Chantiers séparés post-v2.0.0 : compat PHP 8.4, intégration Highcharts, intégration Home Assistant.
+
 ## 1.10.0
 
 - Make Okovision International by adding English language (default).

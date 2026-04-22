@@ -1,39 +1,55 @@
  <?php
  /*
 * Projet : Okovision - Supervision chaudiere OeKofen
-* Auteur : Stawen Dronek
+* Auteur : Stawen Dronek mod by skydarc for V2
 * Utilisation commerciale interdite sans mon accord
 */
 
- function getMenu()
- {
-     //global $page;
-     $page = basename($_SERVER['SCRIPT_NAME']);
+function getMenu()
+{
+    //global $page;
+    $page = basename($_SERVER['SCRIPT_NAME']);
 
-     $menu = ['index.php' => [
-         'txt' => session::getInstance()->getLabel('lang.text.menu.index'),
-         'icon' => 'glyphicon glyphicon-dashboard',
-         'logged' => false, ],
-         'histo.php' => [
-             'txt' => session::getInstance()->getLabel('lang.text.menu.historic'),
-             'icon' => 'glyphicon glyphicon-stats',
-             'logged' => false, ],
-         'rt.php' => [
-             'txt' => session::getInstance()->getLabel('lang.text.menu.rt'),
-             'icon' => 'glyphicon glyphicon-signal',
-             'logged' => true, ],
-     ];
-
-     foreach ($menu as $url => $title) {
-         if ($title['logged'] && !session::getInstance()->getVar('logged')) {
-             continue;
-         }
-         $active = '';
-         if ($page == $url) {
-             $active = ' class="active"';
-         }
-         echo '<li'.$active.'> <a href='.$url.'><span class="'.$title['icon'].'" aria-hidden="true"></span>   '.$title['txt'].'</a></li>';
-     }
+	if (GET_CHAUDIERE_DATA_BY_IP == 2) {
+		$menu = ['index.php' => [
+			'txt' => session::getInstance()->getLabel('lang.text.menu.index'),
+			'icon' => 'glyphicon glyphicon-dashboard',
+			'logged' => false, ],
+			'histo.php' => [
+				'txt' => session::getInstance()->getLabel('lang.text.menu.historic'),
+				'icon' => 'glyphicon glyphicon-stats',
+				'logged' => false, ],
+			'rt_v4.php' => [
+				'txt' => session::getInstance()->getLabel('lang.text.menu.rt'),
+				'icon' => 'glyphicon glyphicon-signal',
+				'logged' => true, ],
+		];
+	} else {
+		$menu = ['index.php' => [
+			'txt' => session::getInstance()->getLabel('lang.text.menu.index'),
+			'icon' => 'glyphicon glyphicon-dashboard',
+			'logged' => false, ],
+			'histo.php' => [
+				'txt' => session::getInstance()->getLabel('lang.text.menu.historic'),
+				'icon' => 'glyphicon glyphicon-stats',
+				'logged' => false, ],
+			'rt.php' => [
+				'txt' => session::getInstance()->getLabel('lang.text.menu.rt'),
+				'icon' => 'glyphicon glyphicon-signal',
+				'logged' => true, ],
+		];
+	}
+	
+    foreach ($menu as $url => $title) {
+        if ($title['logged'] && !session::getInstance()->getVar('logged')) {
+            continue;
+        }
+        $active = '';
+        if ($page == $url) {
+            $active = ' class="active"';
+        }
+        echo '<li'.$active.'> <a href='.$url.'><span class="'.$title['icon'].'" aria-hidden="true"></span>   '.$title['txt'].'</a></li>';
+    }
  }
 
 ?>
@@ -69,6 +85,7 @@
                    
                         <li class="dropdown-header"><span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span> <?php echo session::getInstance()->getLabel('lang.text.menu.manual'); ?></li>    
                             <?php if (GET_CHAUDIERE_DATA_BY_IP) { ?><li><a href="amImpBoiler.php"><?php echo session::getInstance()->getLabel('lang.text.menu.manual.import.ip'); ?></a></li> <?php } ?>
+                            <?php if (GET_CHAUDIERE_DATA_BY_IP == 2) { ?><li><a href="amImpMail.php"><?php echo session::getInstance()->getLabel('lang.text.menu.manual.import.mail'); ?></a></li> <?php } ?>
                             <li><a href="amImpUsb.php"><?php echo session::getInstance()->getLabel('lang.text.menu.manual.import.usb'); ?></a></li>
                             <li><a href="amImportMass.php"><?php echo session::getInstance()->getLabel('lang.text.menu.manual.import.mass'); ?></a></li>
                             <li><a href="amSynthese.php"><?php echo session::getInstance()->getLabel('lang.text.menu.manual.synthese'); ?></a></li>
