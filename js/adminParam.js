@@ -19,9 +19,9 @@ $(document).ready(function() {
 			$("#form-ip").hide();
 		}
 		if (val === 2) {
-			$("#form-json-port, #form-json-pwd, #form-mail-host, #form-mail-log, #form-mail-pwd").show();
+			$("#form-json-port, #form-json-pwd").show();
 		} else {
-			$("#form-json-port, #form-json-pwd, #form-mail-host, #form-mail-log, #form-mail-pwd").hide();
+			$("#form-json-port, #form-json-pwd").hide();
 		}
 	});
 
@@ -70,7 +70,7 @@ $(document).ready(function() {
 		var log  = $('#mail_log').val();
 		var mdp  = $('#mail_pwd').val();
 
-		$.get('_include/bin_v4/test_mail.php', { host: host, log: log, mdp: mdp })
+		$.get('_include/bin_v4/test_mail.php', { host: host, login: log, mdp: mdp })
 			.done(function(raw) {
 				if (raw === 'success') {
 					$.growlValidate(lang.valid.communication);

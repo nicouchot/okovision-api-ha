@@ -1,27 +1,26 @@
 <?php
 /*
  * Projet : Okovision - Supervision chaudiere OeKofen
- * Teste la connexion IMAP à la boîte mail configurée
- * Retourne 'success' si la connexion est établie, ou le message d'erreur sinon
+ * Teste la connexion IMAP avec les paramètres fournis en GET.
+ * Retourne 'success' si OK, chaîne vide sinon.
  */
 
-require_once __DIR__ . '/../../config.php';
+error_reporting(0);
 
-if (!function_exists('imap_open')) {
-    echo 'Extension PHP IMAP non disponible sur ce serveur.';
+$host  = $_GET['host']  ?? '';
+$login = $_GET['login'] ?? '';
+$mdp   = $_GET['mdp']   ?? '';
+
+if (!function_exists('imap_open') || $host === '' || $login === '' || $mdp === '') {
+    echo '';
     exit;
 }
 
-$mailHost = !empty($_GET['host']) ? trim($_GET['host']) : (defined('URL_MAIL')      ? URL_MAIL      : '');
-$mailLog  = !empty($_GET['log'])  ? trim($_GET['log'])  : (defined('LOGIN_MAIL')    ? LOGIN_MAIL    : '');
-$mailPwd  = !empty($_GET['mdp'])  ? trim($_GET['mdp'])  : (defined('PASSWORD_MAIL') ? PASSWORD_MAIL : '');
-
-$conn = imap_open($mailHost, $mailLog, $mailPwd, OP_HALFOPEN);
+$conn = @imap_open($host, $login, $mdp);
 
 if ($conn) {
     imap_close($conn);
     echo 'success';
 } else {
-    $errors = imap_errors();
-    echo $errors ? implode(' / ', $errors) : 'Connexion impossible (erreur inconnue)';
+    echo '';
 }

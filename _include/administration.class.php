@@ -58,24 +58,13 @@ class administration extends connectDb
     public function saveInfoGenerale($s)
     {
         // Make config.json
-
-        // Préserver le mot de passe mail existant si le champ contient le placeholder affiché
-        $cfgPath    = CONTEXT . '/config.json';
-        $existingCfg = is_readable($cfgPath)
-            ? (json_decode(file_get_contents($cfgPath), true) ?? [])
-            : [];
-        $rawPwd = $s['mail_pwd'] ?? '';
-        $savedPwd = ($rawPwd === '' || $rawPwd === '••••••••')
-            ? ($existingCfg['password_mail'] ?? '')
-            : $rawPwd;
-
         $param = [
             'chaudiere'              => $s['oko_ip'],
             'port_json'              => $s['oko_json_port']  ?? '',
             'password_json'          => $s['oko_json_pwd']   ?? '',
             'url_mail'               => $s['mail_host']      ?? '',
             'login_mail'             => $s['mail_log']       ?? '',
-            'password_mail'          => $savedPwd,
+            'password_mail'          => $s['mail_pwd']       ?? '',
             'tc_ref'                 => $s['param_tcref'],
             'poids_pellet'           => $s['param_poids_pellet'],
             'surface_maison'         => $s['surface_maison'],

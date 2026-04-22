@@ -1,25 +1,30 @@
 <?php
 /*
  * Projet : Okovision - Supervision chaudiere OeKofen
- * Liste les emails IMAP contenant des pièces jointes CSV
- * Retourne JSON : { response: true, mailArray: "{num: nom, ...}" }
- *              ou { response: 'noMail', mailArray: 'nc' }
+ * Liste les emails IMAP contenant des pièces jointes CSV.
+ * Format de retour (calqué sur skydarc/okovision_v2) :
+ *   { response: true, mailArray: "{\"1\":\"fichier.csv\", ...}" }   (mailArray est une string JSON)
+ *   { response: 'noMail', mailArray: 'nc' }
+ *   chaîne vide si connexion IMAP échoue
  */
 
 require_once __DIR__ . '/../../config.php';
 
+error_reporting(0);
+
 if (!function_exists('imap_open')) {
-    echo json_encode(['response' => false, 'error' => 'Extension IMAP non disponible']);
+    echo '';
     exit;
 }
 
 $tmpDir = CONTEXT . '/_tmp/';
 $files  = is_dir($tmpDir) ? scandir($tmpDir) : [];
+$lang   = $config['lang'] ?? 'fr';
 
-$imapConn = imap_open(URL_MAIL, LOGIN_MAIL, PASSWORD_MAIL);
+$imapConn = @imap_open(URL_MAIL, LOGIN_MAIL, PASSWORD_MAIL);
 
 if (!$imapConn) {
-    echo json_encode(['response' => false, 'error' => imap_last_error()]);
+    echo '';
     exit;
 }
 
@@ -37,9 +42,9 @@ if ($emails) {
         }
 
         for ($i = 0; $i < count($structure->parts); $i++) {
-            $part        = $structure->parts[$i];
-            $isAttach    = false;
-            $attachName  = '';
+            $part       = $structure->parts[$i];
+            $isAttach   = false;
+            $attachName = '';
 
             if ($part->ifdparameters) {
                 foreach ($part->dparameters as $obj) {
@@ -63,12 +68,13 @@ if ($emails) {
                 $ext = strtolower(pathinfo($attachName, PATHINFO_EXTENSION));
                 if ($ext === 'csv') {
                     if (array_search($attachName, $files) !== false) {
-                        $label = (LANG === 'fr')
+                        $label = ($lang === 'fr')
                             ? $attachName . ' <b class="red">déjà présent</b>'
                             : $attachName . ' <b class="red">already present</b>';
                     } else {
                         $label = $attachName;
                     }
+                    // Clé = emailNumber (format attendu par le JS : double JSON parse)
                     $mailArray[$emailNumber] = $label;
                 }
             }
@@ -77,10 +83,8 @@ if ($emails) {
 
     $output['mailArray'] = json_encode($mailArray, JSON_UNESCAPED_UNICODE);
     echo json_encode($output, JSON_UNESCAPED_UNICODE);
-
 } else {
-    $output = ['response' => 'noMail', 'mailArray' => 'nc'];
-    echo json_encode($output, JSON_UNESCAPED_UNICODE);
+    echo json_encode(['response' => 'noMail', 'mailArray' => 'nc'], JSON_UNESCAPED_UNICODE);
 }
 
 imap_close($imapConn);

@@ -74,26 +74,30 @@
                             </div>
                         </div>
 
-                        <!-- Mailbox configuration -->
-                        <div class="form-group" id="form-mail-host" <?php if ((int)($config['get_data_from_chaudiere'] ?? 0) !== 2) { echo 'style="display: none;"'; } ?>>
+    				</fieldset>
+
+    				<!-- Mailbox configuration (section indépendante du mode de récupération) -->
+    				<fieldset>
+    				    <legend><?php echo session::getInstance()->getLabel('lang.text.page.admin.mailcomm'); ?></legend>
+
+                        <div class="form-group" id="form-mail-host">
                             <label class="col-md-4 control-label" for="mail_host"><?php echo session::getInstance()->getLabel('lang.text.page.admin.mailhost'); ?></label>
                             <div class="col-md-3">
                                 <input id="mail_host" name="mail_host" type="text" class="form-control input-md" placeholder="ex : {imap.exemple.com:993/imap/ssl}" value="<?php echo $config['url_mail'] ?? ''; ?>">
-                                <span class="help-block"><?php echo session::getInstance()->getLabel('lang.text.page.admin.mailcomm'); ?></span>
                             </div>
                         </div>
 
-                        <div class="form-group" id="form-mail-log" <?php if ((int)($config['get_data_from_chaudiere'] ?? 0) !== 2) { echo 'style="display: none;"'; } ?>>
+                        <div class="form-group" id="form-mail-log">
                             <label class="col-md-4 control-label" for="mail_log"><?php echo session::getInstance()->getLabel('lang.text.page.admin.maillog'); ?></label>
                             <div class="col-md-3">
                                 <input id="mail_log" name="mail_log" type="text" class="form-control input-md" placeholder="email@exemple.com" value="<?php echo $config['login_mail'] ?? ''; ?>">
                             </div>
                         </div>
 
-                        <div class="form-group" id="form-mail-pwd" <?php if ((int)($config['get_data_from_chaudiere'] ?? 0) !== 2) { echo 'style="display: none;"'; } ?>>
+                        <div class="form-group" id="form-mail-pwd">
                             <label class="col-md-4 control-label" for="mail_pwd"><?php echo session::getInstance()->getLabel('lang.text.page.admin.mailpwd'); ?></label>
                             <div class="col-md-3">
-                                <input id="mail_pwd" name="mail_pwd" type="password" class="form-control input-md" value="<?php echo ($config['login_mail'] ?? '') !== '' ? '••••••••' : ''; ?>">
+                                <input id="mail_pwd" name="mail_pwd" type="text" class="form-control input-md" placeholder="password" value="<?php echo $config['password_mail'] ?? ''; ?>">
                             </div>
                             <div class="col-md-3">
                                 <button type="button" class="btn btn-xs btn-default" id="test_mail">

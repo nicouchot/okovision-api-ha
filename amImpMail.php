@@ -1,7 +1,7 @@
 <?php
 /*****************************************************
 * Projet : Okovision - Supervision chaudiere OeKofen
-* Auteur : Stawen Dronek
+* Auteur : Stawen Dronek (inspired by skydarc)
 * Utilisation commerciale interdite sans mon accord
 ******************************************************/
 
@@ -11,7 +11,7 @@ include_once '_templates/menu.php';
 ?>
 
 <div class="container theme-showcase" role="main">
-<br/>
+    <br/>
     <div class="page-header">
         <h2><?php echo session::getInstance()->getLabel('lang.text.menu.manual.import.mail'); ?></h2>
     </div>
@@ -22,13 +22,10 @@ include_once '_templates/menu.php';
         <br/><span class="glyphicon glyphicon-refresh glyphicon-spin"></span>&nbsp;<?php echo session::getInstance()->getLabel('lang.text.page.manual.workinprogress'); ?>
     </div>
 
-    <table id="listeFichierFromMailBox" class="table table-hover" style="display:none;">
+    <table id="listeFichierFromMailBox" class="table table-hover">
         <thead>
             <tr>
-                <th class="col-md-1">
-                    <input type="checkbox" id="selectAll" title="Sélectionner tout">
-                </th>
-                <th class="col-md-9"><?php echo session::getInstance()->getLabel('lang.text.page.manual.mail.filefromboiler'); ?></th>
+                <th class="col-md-10"><?php echo session::getInstance()->getLabel('lang.text.page.manual.mail.filefromboiler'); ?></th>
                 <th class="col-md-2"></th>
             </tr>
         </thead>
@@ -36,13 +33,10 @@ include_once '_templates/menu.php';
         </tbody>
     </table>
 
-    <div id="import-actions" style="display:none; margin-top:10px;">
-        <button type="button" id="bt_import_selected" class="btn btn-primary">
-            <span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span>
-            <?php echo session::getInstance()->getLabel('lang.text.importAll'); ?>
-        </button>
-    </div>
-
+    <button type="button" id="bt_import" class="btn btn-xs btn-default">
+        <span class="glyphicon glyphicon-cloud-download" aria-hidden="true"></span>
+        <?php echo session::getInstance()->getLabel('lang.text.page.import.bt'); ?>
+    </button>
 </div>
 
 <?php include(__DIR__.'/_templates/footer.php'); ?>
