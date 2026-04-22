@@ -57,24 +57,25 @@ class administration extends connectDb
     public function saveInfoGenerale($s)
     {
         // Make config.json
-
         $param = [
-            'chaudiere' => $s['oko_ip'],
-            'port_json' => $s['oko_json_port'],
-            'password_json' => $s['oko_json_pwd'],
-            'url_mail' => $s['mail_host'],
-            'login_mail' => $s['mail_log'],
-            'password_mail' => $s['mail_pwd'],
-            'tc_ref' => $s['param_tcref'],
-            'poids_pellet' => $s['param_poids_pellet'],
-            'surface_maison' => $s['surface_maison'],
-            'get_data_from_chaudiere' => $s['oko_typeconnect'],
-            'timezone' => $s['timezone'],
-            'send_to_web' => $s['send_to_web'],
-            'has_silo' => $s['has_silo'],
-            'silo_size' => $s['silo_size'],
-            'ashtray' => $s['ashtray'],
-            'lang' => $s['lang'],
+            'chaudiere'              => $s['oko_ip'],
+            'port_json'              => $s['oko_json_port']  ?? '',
+            'password_json'          => $s['oko_json_pwd']   ?? '',
+            'url_mail'               => $s['mail_host']      ?? '',
+            'login_mail'             => $s['mail_log']       ?? '',
+            'password_mail'          => $s['mail_pwd']       ?? '',
+            'tc_ref'                 => $s['param_tcref'],
+            'poids_pellet'           => $s['param_poids_pellet'],
+            'surface_maison'         => $s['surface_maison'],
+            'get_data_from_chaudiere'=> $s['oko_typeconnect'],
+            'timezone'               => $s['timezone'],
+            'send_to_web'            => $s['send_to_web'],
+            'has_silo'               => $s['has_silo'],
+            'silo_size'              => $s['silo_size'],
+            'ashtray'                => $s['ashtray'],
+            'pci_pellet'             => $s['pci_pellet']             ?? '',
+            'rendement_chaudiere'    => $s['rendement_chaudiere']    ?? '',
+            'lang'                   => $s['lang'],
         ];
 
         $r = [];
