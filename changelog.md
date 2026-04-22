@@ -10,7 +10,7 @@ Mise en conformité avec PHP 8.4 du code rapatrié de `skydarc/okovision_v2` (ma
   - `_include/bin_v4/get_softVersion.php`
   - `_include/bin_v4/get_captor_lim.php`
 - Aucun paramètre typé nullable implicite détecté (audit initial infirmé après grep complet).
-- Extension IMAP : dépréciée en PHP 8.4 (notice soft uniquement) — à vérifier sur l'env dev (`php -m | grep imap`).
+- Extension IMAP : dépréciée en PHP 8.4 (notice soft uniquement) — confirmée présente et active sur le profil PHP du vhost Synology (DSM, 2026-04-22). Aucune action requise.
 
 Note : PHPUnit non ajouté (code legacy non conçu pour les tests unitaires). Prévu comme pré-requis du chantier Home Assistant.
 
