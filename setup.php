@@ -2,7 +2,7 @@
 
     /**
      * Projet : Okovision - Supervision chaudiere OeKofen
-     * Auteur : Stawen Dronek
+     * Auteurs : Stawen Dronek mod by skydarc for V2
      * Utilisation commerciale interdite sans mon accord.
      */
     function is_ajax()
@@ -89,6 +89,11 @@
         // Make config.json
         $param = [
             'chaudiere' => $s['oko_ip'],
+            'port_json' => $s['oko_json_port'],
+			'password_json' => $s['oko_json_pwd'],
+			'url_mail' =>  $s['mail_host'],
+			'login_mail' =>  $s['mail_log'],
+			'password_mail' =>  $s['mail_pwd'],
             'tc_ref' => $s['param_tcref'],
             'poids_pellet' => $s['param_poids_pellet'],
             'surface_maison' => $s['surface_maison'],
@@ -224,6 +229,7 @@
 					    <select id="oko_typeconnect" name="oko_typeconnect" class="form-control">
 					        <option value="0">USB</option>
 			                <option value="1">IP</option>
+							<option value="2">IP via Json (firmware v4.00b)</option>
 					    </select>
 					  </div>
 					</div>
@@ -235,8 +241,49 @@
 					    <input id="oko_ip" name="oko_ip" type="text" placeholder="ex : 192.168.0.xx" class="form-control input-md">
 					  </div>
 					</div>
+					
+					<div class="form-group" id="form-json-port" style="display: none;">
+					  <label class="col-md-4 control-label" for="oko_json_port">Json port :</label>  
+					  <div class="col-md-3">
+					    <input id="oko_json_port" name="oko_json_port" type="text" placeholder="ex : 4321" class="form-control input-md">
+					  </div>
+					</div>
+					
+					<div class="form-group" id="form-json-pwd" style="display: none;">
+					  <label class="col-md-4 control-label" for="oko_json_pwd">Json password :</label>  
+					  <div class="col-md-3">
+					    <input id="oko_json_pwd" name="oko_json_pwd" type="text" placeholder="ex : A1b2" class="form-control input-md">
+					  </div>
+					</div>
 				
 				</fieldset>
+				
+					<div id="form-mail" style="display: none;">
+						<legend>Recovery of csv from mailbox</legend>
+    					
+							<div class="form-group" id="form-host">
+								<label class="col-md-4 control-label" for="oko_ip">MailBox server host (<a href='https://www.php.net/manual/en/function.imap-delete.php' style='text-decoration; none; color; inherit;'>info</a>)</label>  
+								<div class="col-md-3">
+									<input id="mail_host" name="mail_host" type="text" class="form-control input-md" placeholder="ex : 127.0.0.1">
+								</div>
+							</div>
+						
+							<div class="form-group" id="form-login">
+								<label class="col-md-4 control-label" for="oko_ip">Mailbox login</label>  
+								<div class="col-md-3">
+									<input id="mail_log" name="mail_log" type="text" class="form-control input-md" placeholder="login">
+								</div>
+							</div>
+							
+							<div class="form-group" id="form-loginPwd">
+								<label class="col-md-4 control-label" for="oko_ip">Mailbox password</label>  
+								<div class="col-md-3">
+									<input id="mail_pwd" name="mail_pwd" type="text" class="form-control input-md" placeholder="password">
+								</div>
+							</div>
+					</div>
+    				
+    				
 			</form>
 
 			<form class="form-horizontal">

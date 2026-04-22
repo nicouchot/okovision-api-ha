@@ -1,6 +1,6 @@
 /*****************************************************
  * Projet : Okovision - Supervision chaudiere OeKofen
- * Auteur : Stawen Dronek
+ * Auteur : Stawen Dronek mod by skydarc for V2
  * Utilisation commerciale interdite sans mon accord
  ******************************************************/
 /* global lang, $ */
@@ -37,11 +37,32 @@ $(document).ready(function() {
 
 	$("#oko_typeconnect").change(function() {
 
-		if ($(this).val() == 1) {
+		/*if ($(this).val() == 1) {
 			$("#form-ip").show();
 		}
 		else {
 			$("#form-ip").hide();
+		}*/
+		if ($(this).val() == 1) {
+			$("#form-ip").show();
+			$("#div_test_oko_ip").show();
+			$("#form-json-port").hide();
+			$("#form-json-pwd").hide();
+			$("#form-mail").hide();
+		}
+		else if ($(this).val() == 2) {
+			$("#form-ip").show();
+			$("#div_test_oko_ip").hide();
+			$("#form-json-port").show();
+			$("#form-json-pwd").show();
+			$("#form-mail").show();
+		}
+		else {
+			$("#form-ip").hide();
+			$("#div_test_oko_ip").hide();
+			$("#form-json-port").hide();
+			$("#form-json-pwd").hide();
+			$("#form-mail").hide();
 		}
 	});
 
@@ -54,6 +75,11 @@ $(document).ready(function() {
 			db_schema: $('#db_schema').val(),
 			createDb: $('#createDb').val(),
 			oko_ip: $('#oko_ip').val(),
+			oko_json_port: $('#oko_json_port').val(),
+			oko_json_pwd: $('#oko_json_pwd').val(),
+			mail_host: $('#mail_host').val(),
+			mail_log: $('#mail_log').val(),
+			mail_pwd: $('#mail_pwd').val(),
 			param_tcref: $('#param_tcref').val(),
 			param_poids_pellet: $('#param_poids_pellet').val(),
 			surface_maison: $('#surface_maison').val(),
