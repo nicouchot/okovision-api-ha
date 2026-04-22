@@ -1,5 +1,19 @@
 ## Unrealised
 
+## 2.1.0 — 2026-04-22 — Compatibilité PHP 8.4
+
+Mise en conformité avec PHP 8.4 du code rapatrié de `skydarc/okovision_v2` (mai 2022, PHP 7.x).
+
+- Remplacement de `utf8_encode()` (supprimée depuis PHP 8.2, fatale en 8.4) par `mb_convert_encoding($s, 'UTF-8', 'ISO-8859-1')` dans 4 fichiers :
+  - `_include/administration.class.php`
+  - `_include/bin_v4/set_captor.php`
+  - `_include/bin_v4/get_softVersion.php`
+  - `_include/bin_v4/get_captor_lim.php`
+- Aucun paramètre typé nullable implicite détecté (audit initial infirmé après grep complet).
+- Extension IMAP : dépréciée en PHP 8.4 (notice soft uniquement) — à vérifier sur l'env dev (`php -m | grep imap`).
+
+Note : PHPUnit non ajouté (code legacy non conçu pour les tests unitaires). Prévu comme pré-requis du chantier Home Assistant.
+
 ## 2.0.0 — 2026-04-22 — Migration V4 (rapatriement skydarc/okovision_v2)
 
 Support du firmware OkoFen V4 (API JSON), dashboard temps réel dédié, et import CSV via mail IMAP. Les apports viennent du fork [skydarc/okovision_v2](https://github.com/skydarc/okovision_v2) (mai 2022), rapatriés phase par phase sur ce fork.
