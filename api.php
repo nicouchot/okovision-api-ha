@@ -171,10 +171,10 @@ if (is_ajax() && is_valid()) {
     }
 } else {
     if (!is_ajax()) {
-        echo '<pre>xmlhttprequest needed ! </pre>';
+        //echo '<pre>xmlhttprequest needed ! </pre>';
     }
     if (!is_valid()) {
-        header('Content-type: text/json; charset=utf-8');
-        echo '{"response": false,"apiToken": "invalid"}';
+        //header('Content-type: text/json; charset=utf-8');
+        //echo '{"response": false,"apiToken": "invalid"}';
     }
 }
