@@ -143,7 +143,7 @@ class administration extends connectDb
 
         $ch = curl_init('http://'.CHAUDIERE.':'.PORT_JSON.'/'.PASSWORD_JSON.'/log0');
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        $csv = utf8_encode(curl_exec($ch));
+        $csv = mb_convert_encoding(curl_exec($ch), 'UTF-8', 'ISO-8859-1');
 
         $Data = str_getcsv($csv, "\n");
 
