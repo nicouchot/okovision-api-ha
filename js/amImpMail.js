@@ -1,101 +1,126 @@
 /*****************************************************
  * Projet : Okovision - Supervision chaudiere OeKofen
- * Auteur : skydarc
+ * Auteur : Stawen Dronek (inspired by skydarc)
  * Utilisation commerciale interdite sans mon accord
  ******************************************************/
-/* global lang */
+/* global lang, $ */
+
 $(document).ready(function() {
 
-	/*
-	 * affichage de la liste de CSV en PJ contenu dans la mail box
-	 */
-	$.get('_include/bin_v4/get_list_mail.php').done(function(jsonMail) {
+    // ── Chargement initial de la liste ─────────────────────────────────
+    $.get('_include/bin_v4/get_list_mail.php').done(function(jsonMail) {
 
-		const attachments = JSON.parse(jsonMail);
-		
-		if(attachments.response == true) {
+        if (!jsonMail) {
+            $("#inwork-remotefile").hide();
+            $.growlErreur(lang.error.mailboxDontRespond);
+            return;
+        }
 
-			const mailList = JSON.parse(attachments.mailArray);
-		
-			var maxkey;
+        var attachments;
+        try {
+            attachments = (typeof jsonMail === 'string') ? JSON.parse(jsonMail) : jsonMail;
+        } catch (e) {
+            $("#inwork-remotefile").hide();
+            $.growlErreur(lang.error.mailboxDontRespond);
+            return;
+        }
 
-			$("#inwork-remotefile").hide();
-			$("#listeFichierFromMailBox> tbody").html("");
-			
-			$('#listeFichierFromMailBox > tbody:last').append('<tr style="display: none;"><td><input type="checkbox" id="index_0"></td></tr>');
-			
-			$.each(mailList, function(key, mail) {
-				
-				maxkey = key;
-				
-				$('#listeFichierFromMailBox > tbody:last').append('<tr><td><input type="checkbox" id="index_'+key+'" name="'+key+'"> ' + mail + '</td><td><button type="button" id="del_mail" class="btn btn-default btn-sm" name="'+key+'"><span class="glyphicon glyphicon-trash" aria-hidden="true"></span></button></td></tr>');
-				
-			});
-			
-			$('#listeFichierFromMailBox > tbody:last').append('<tr><td><input type="checkbox" id="index_all"> ' + lang.text.importAll + '</td><td><button type="button" id="del_mail" class="btn btn-default btn-sm" name="1:'+maxkey+'"><span class="glyphicon glyphicon-trash" aria-hidden="true"></span></button></td></tr>');
-			
-		} else if(attachments.response == 'noMail') {
-			
-			$("#inwork-remotefile").hide();
-			
-			$.growlErreur(lang.error.noMail);
-			
-		} else {
+        if (attachments.response === true) {
 
-			$("#inwork-remotefile").hide();
-			
-			$.growlErreur(lang.error.mailboxDontRespond);
-			
-		}
-	});
+            var mailList;
+            try {
+                mailList = (typeof attachments.mailArray === 'string')
+                    ? JSON.parse(attachments.mailArray)
+                    : attachments.mailArray;
+            } catch (e) {
+                $("#inwork-remotefile").hide();
+                $.growlErreur(lang.error.mailboxDontRespond);
+                return;
+            }
 
-	/*
-	 * selectionne tout
-	 */
-	$("body").on("click", "[id^='index_all']:input", function() {
-		if($('#index_0').is(':checked') ) {
-			$('input:checkbox').prop('checked', false);
-		} else {
-			$('input:checkbox').prop('checked', true);
-		}
-	});
-	
-	$("#bt_import").click(function() {
-        
-		var mailSelected = [];
-		$.each($("input:checkbox:checked"), function(){
-			if( !isNaN($(this).attr('name')) ) {
-				mailSelected.push($(this).attr('name'));
-			}
-        });
-		$mailArray = mailSelected.join(",");
-		
-		if($mailArray != "") {
-			$.get('_include/bin_v4/download_csv.php?list='+$mailArray).done(function(json) {
-				if(json == 'true') $.growlValidate(lang.valid.csvImport);
-				else $.growlErreur(lang.error.csvImport);
-			});
-		} else {
-			$.growlErreur(lang.error.noSelect);
-		}
+            var maxkey;
+
+            $("#inwork-remotefile").hide();
+            $("#listeFichierFromMailBox > tbody").html("");
+
+            // Ligne sentinelle masquée (utilisée par le toggle #index_all)
+            $('#listeFichierFromMailBox > tbody').append(
+                '<tr style="display:none;"><td><input type="checkbox" id="index_0"></td><td></td></tr>'
+            );
+
+            $.each(mailList, function(key, mail) {
+                maxkey = key;
+                $('#listeFichierFromMailBox > tbody').append(
+                    '<tr>' +
+                        '<td><input type="checkbox" id="index_' + key + '" name="' + key + '"> ' + mail + '</td>' +
+                        '<td><button type="button" id="del_mail" class="btn btn-default btn-sm" name="' + key + '">' +
+                            '<span class="glyphicon glyphicon-trash" aria-hidden="true"></span>' +
+                        '</button></td>' +
+                    '</tr>'
+                );
+            });
+
+            if (typeof maxkey !== 'undefined') {
+                $('#listeFichierFromMailBox > tbody').append(
+                    '<tr>' +
+                        '<td><input type="checkbox" id="index_all"> ' + lang.text.importAll + '</td>' +
+                        '<td><button type="button" id="del_mail" class="btn btn-default btn-sm" name="1:' + maxkey + '">' +
+                            '<span class="glyphicon glyphicon-trash" aria-hidden="true"></span>' +
+                        '</button></td>' +
+                    '</tr>'
+                );
+            }
+
+        } else if (attachments.response === 'noMail') {
+            $("#inwork-remotefile").hide();
+            $.growlErreur(lang.error.noMail);
+        } else {
+            $("#inwork-remotefile").hide();
+            $.growlErreur(lang.error.mailboxDontRespond);
+        }
+    }).fail(function() {
+        $("#inwork-remotefile").hide();
+        $.growlErreur(lang.error.mailboxDontRespond);
     });
-	
 
-	$("body").on("click", "[id^='del_mail']:button", function() {
-		
-		$.get('_include/bin_v4/delete_mail.php?list='+$(this).attr('name')).done(function(json) {
-			
-			if(json == 'true') $.growlValidate(lang.valid.delMail);
-			else $.growlErreur(lang.error.delMail);
-			
-			setTimeout(function () {
-				location.reload(true);
-			}, 2000);
-			
-		});
-		
-		
-	});
+    // ── Toggle "Tout sélectionner" via la case #index_all ──────────────
+    $("body").on("click", "#index_all", function() {
+        if ($('#index_0').is(':checked')) {
+            $('input:checkbox').prop('checked', false);
+        } else {
+            $('input:checkbox').prop('checked', true);
+        }
+    });
 
-	
+    // ── Import de la sélection ─────────────────────────────────────────
+    $("#bt_import").click(function() {
+        var mailSelected = [];
+        $.each($("input:checkbox:checked"), function() {
+            if (!isNaN($(this).attr('name'))) {
+                mailSelected.push($(this).attr('name'));
+            }
+        });
+        var list = mailSelected.join(",");
+
+        if (list !== "") {
+            $.get('_include/bin_v4/download_csv.php?list=' + list).done(function(raw) {
+                if (raw == 'true') $.growlValidate(lang.valid.csvImport);
+                else $.growlErreur(lang.error.csvImport);
+            });
+        } else {
+            $.growlErreur(lang.error.noSelect);
+        }
+    });
+
+    // ── Suppression d'un mail (bouton poubelle par ligne) ──────────────
+    $("body").on("click", "[id^='del_mail']:button", function() {
+        var key = $(this).attr('name');
+
+        $.get('_include/bin_v4/delete_mail.php?list=' + key).done(function(raw) {
+            if (raw == 'true') $.growlValidate(lang.valid.delMail);
+            else $.growlErreur(lang.error.delMail);
+
+            setTimeout(function() { location.reload(true); }, 2000);
+        });
+    });
 });

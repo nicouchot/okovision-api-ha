@@ -1,109 +1,90 @@
 <?php
 /*
-* Projet : Okovision - Supervision chaudiere OeKofen
-* Auteur : skydarc (port nicouchot)
-* Utilisation commerciale interdite sans mon accord
-*/
+ * Projet : Okovision - Supervision chaudiere OeKofen
+ * Liste les emails IMAP contenant des pièces jointes CSV.
+ * Format de retour (calqué sur skydarc/okovision_v2) :
+ *   { response: true, mailArray: "{\"1\":\"fichier.csv\", ...}" }   (mailArray est une string JSON)
+ *   { response: 'noMail', mailArray: 'nc' }
+ *   chaîne vide si connexion IMAP échoue
+ */
 
-	$config = json_decode(file_get_contents("../../config.json"), true);
-	DEFINE('URL_MAIL',$config['url_mail']);
-	DEFINE('LOGIN_MAIL',$config['login_mail']);
-	DEFINE('PASSWORD_MAIL',$config['password_mail']);
-	DEFINE('LANG',$config['lang']);
+require_once __DIR__ . '/../../config.php';
 
-	error_reporting(0);
+error_reporting(0);
 
-	$files = scandir(__DIR__.'/../../_tmp/');
+if (!function_exists('imap_open')) {
+    echo '';
+    exit;
+}
 
-	$imap_connection = imap_open(URL_MAIL, LOGIN_MAIL, PASSWORD_MAIL) ;
+$tmpDir = CONTEXT . '/_tmp/';
+$files  = is_dir($tmpDir) ? scandir($tmpDir) : [];
+$lang   = $config['lang'] ?? 'fr';
 
-	$emails = imap_search($imap_connection,'ALL');
+$imapConn = @imap_open(URL_MAIL, LOGIN_MAIL, PASSWORD_MAIL);
 
-	if($emails) {
+if (!$imapConn) {
+    echo '';
+    exit;
+}
 
-		$output['response'] = true;
+$emails = imap_search($imapConn, 'ALL');
 
-		foreach($emails as $value => $email_number) {
+if ($emails) {
+    $output    = ['response' => true];
+    $mailArray = [];
 
-			$structure = imap_fetchstructure($imap_connection,$email_number);
+    foreach ($emails as $emailNumber) {
+        $structure = imap_fetchstructure($imapConn, $emailNumber);
 
-			$attachments = array();
-			if(isset($structure->parts) && count($structure->parts)) {
+        if (!isset($structure->parts) || !count($structure->parts)) {
+            continue;
+        }
 
-				for($i = 0; $i < count($structure->parts); $i++) {
+        for ($i = 0; $i < count($structure->parts); $i++) {
+            $part       = $structure->parts[$i];
+            $isAttach   = false;
+            $attachName = '';
 
-					$attachments[$i] = array(
-						'is_attachment' => false,
-						'filename' => '',
-						'name' => '',
-						'attachment' => ''
-					);
+            if ($part->ifdparameters) {
+                foreach ($part->dparameters as $obj) {
+                    if (strtolower($obj->attribute) === 'filename') {
+                        $isAttach   = true;
+                        $attachName = $obj->value;
+                    }
+                }
+            }
 
-					if($structure->parts[$i]->ifdparameters) {
-						foreach($structure->parts[$i]->dparameters as $object) {
-							if(strtolower($object->attribute) == 'filename') {
-								$attachments[$i]['is_attachment'] = true;
-								$attachments[$i]['filename'] = $object->value;
-							}
-						}
-					}
+            if ($part->ifparameters) {
+                foreach ($part->parameters as $obj) {
+                    if (strtolower($obj->attribute) === 'name') {
+                        $isAttach   = true;
+                        $attachName = $obj->value;
+                    }
+                }
+            }
 
-					if($structure->parts[$i]->ifparameters) {
-						foreach($structure->parts[$i]->parameters as $object) {
-							if(strtolower($object->attribute) == 'name') {
-								$attachments[$i]['is_attachment'] = true;
-								$attachments[$i]['name'] = $object->value;
-							}
-						}
-					}
+            if ($isAttach && $attachName !== '') {
+                $ext = strtolower(pathinfo($attachName, PATHINFO_EXTENSION));
+                if ($ext === 'csv') {
+                    if (array_search($attachName, $files) !== false) {
+                        $label = ($lang === 'fr')
+                            ? $attachName . ' <b class="red">déjà présent</b>'
+                            : $attachName . ' <b class="red">already present</b>';
+                    } else {
+                        $label = $attachName;
+                    }
+                    // Clé = emailNumber (format attendu par le JS : double JSON parse)
+                    $mailArray[$emailNumber] = $label;
+                }
+            }
+        }
+    }
 
-					if($attachments[$i]['is_attachment']) {
-						$attachments[$i]['attachment'] = imap_fetchbody($imap_connection, $email_number, $i+1);
-						if($structure->parts[$i]->encoding == 3) { // 3 = BASE64
-							$attachments[$i]['attachment'] = base64_decode($attachments[$i]['attachment']);
-						}
-						elseif($structure->parts[$i]->encoding == 4) { // 4 = QUOTED-PRINTABLE
-							$attachments[$i]['attachment'] = quoted_printable_decode($attachments[$i]['attachment']);
-						}
-					}
-				}
-			}
+    $output['mailArray'] = json_encode($mailArray, JSON_UNESCAPED_UNICODE);
+    echo json_encode($output, JSON_UNESCAPED_UNICODE);
+} else {
+    echo json_encode(['response' => 'noMail', 'mailArray' => 'nc'], JSON_UNESCAPED_UNICODE);
+}
 
-			foreach ($attachments as $key => $attachment) {
-				$name = $attachment['name'];
-
-				$contents = $attachment['attachment'];
-
-				if($name != "") {
-
-					$path_parts = pathinfo($name);
-					if( strtolower($path_parts['extension']) == 'csv' ) {
-
-						if( array_search($name, $files) ) {
-							if(LANG == 'fr') $mailArray[$email_number] = $name.' <b class="red">déjà présent</b>';
-							elseif(LANG == 'en') $mailArray[$email_number] = $name.' <b class="red">allready present</b>';
-						} else $mailArray[$email_number] = $name;
-
-					}
-
-				}
-			}
-		}
-
-		$output['mailArray'] = json_encode($mailArray, JSON_UNESCAPED_UNICODE);
-
-		echo json_encode($output, JSON_UNESCAPED_UNICODE);
-
-	} else {
-
-		if($imap_connection) {
-			$output['response'] = 'noMail';
-			$output['mailArray'] = "nc";
-			echo json_encode($output, JSON_UNESCAPED_UNICODE);
-		}
-
-		else echo '';
-
-	}
-
-?>
+imap_close($imapConn);

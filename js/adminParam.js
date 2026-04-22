@@ -34,7 +34,11 @@ $(document).ready(function() {
 			$("#form-json-pwd").hide();
 			$("#form-mail").hide();
 		}
-		
+		if (val === 2) {
+			$("#form-json-port, #form-json-pwd").show();
+		} else {
+			$("#form-json-port, #form-json-pwd").hide();
+		}
 	});
 
 	$('#test_oko_ip').click(function() {
@@ -69,66 +73,40 @@ $(document).ready(function() {
 	$('#test_oko_json').click(function() {
 
 
-		var ip = $('#oko_ip').val();
-		var port = $('#oko_json_port').val();
-		var mdp = $('#oko_json_pwd').val();
-		
-		$.get('_include/bin_v4/get_softVersion.php?ip='+ip+'&port='+port+'&mdp='+mdp).done(function(jsdata) {
-	
-			//si ip ok
-			if(jsdata != "") {
-				
-				const jsArray = JSON.parse(jsdata);
-				
-				//si port ok (si rep de la chaudiere)
-				if( jsArray.data != "" ) {
-					
-					try {
-						const jsResp = JSON.parse(jsArray.data);
-					} catch (e) {
-						$.growlWarning(lang.error.badpwd);
-						return;
-					}
-					
-					if (parseInt(jsArray.version[0]) >= 4) {
-				
-						//$('#url_csv').html("");
-						$.growlValidate(lang.valid.communication);
-						//$('#url_csv').append('<a target="_blank" href="' + json.url + '">' + lang.text.seeFileOnboiler + '</a>');
-					} else {
-						$.growlWarning(lang.error.tooldfirmware);
-					}
-					
-					
-				} else {
-					$.growlWarning(lang.error.portNotRespond);
-				}
-			} else {
-				$.growlWarning(lang.error.ipNotPing);
-			}
-		});
+		var mdp  = $('#oko_json_pwd').val();
+
+		$.get('_include/bin_v4/get_softVersion.php', { ip: ip, port: port, mdp: mdp })
+			.done(function(raw) {
+				var json;
+				try { json = (typeof raw === 'string') ? JSON.parse(raw) : raw; } catch(e) { $.growlWarning(lang.error.portNotRespond); return; }
+
+				if (!json || !json.version) { $.growlWarning(lang.error.portNotRespond); return; }
+
+				var ver = parseFloat(json.version);
+				if (isNaN(ver)) { $.growlWarning(lang.error.portNotRespond); return; }
+				if (ver < 4) { $.growlWarning(lang.error.tooldfirmware); return; }
+
+				$.growlValidate(lang.valid.communication + ' — firmware ' + json.version);
+			})
+			.fail(function() { $.growlWarning(lang.error.portNotRespond); });
 	});
-	
+
 	$('#test_mail').click(function() {
-
 		var host = $('#mail_host').val();
-		var login = $('#mail_log').val();
-		var mdp = $('#mail_pwd').val();
-		
-		$.get('_include/bin_v4/test_mail.php?host='+host+'&login='+login+'&mdp='+mdp).done(function(jsdata) {
-	
-			//si ip ok
-			if(jsdata == "success") {
+		var log  = $('#mail_log').val();
+		var mdp  = $('#mail_pwd').val();
 
-				$.growlValidate(lang.valid.communication);
-				//$('#url_csv').append('<a target="_blank" href="' + json.url + '">' + lang.text.seeFileOnboiler + '</a>');
-
-			} else {
-				$.growlWarning(lang.error.mailboxDontRespond);
-			}
-		});
+		$.get('_include/bin_v4/test_mail.php', { host: host, login: log, mdp: mdp })
+			.done(function(raw) {
+				if (raw === 'success') {
+					$.growlValidate(lang.valid.communication);
+				} else {
+					$.growlWarning(lang.error.mailboxDontRespond);
+				}
+			})
+			.fail(function() { $.growlWarning(lang.error.mailboxDontRespond); });
 	});
-        
+
 	$("#oko_loadingmode").change(function() {
 
 		if ($(this).val() == 1) {
