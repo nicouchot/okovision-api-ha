@@ -19,6 +19,6 @@
 	// Return response instead of outputting
 	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 
-	$capt = utf8_encode(curl_exec($ch));
+	$capt = mb_convert_encoding(curl_exec($ch), 'UTF-8', 'ISO-8859-1');
 	echo $capt;
 ?>

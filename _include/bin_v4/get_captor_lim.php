@@ -21,7 +21,7 @@
 	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 
 	// Execute the POST request
-	$json = utf8_encode(curl_exec($ch));
+	$json = mb_convert_encoding(curl_exec($ch), 'UTF-8', 'ISO-8859-1');
 	$json = json_decode($json, true);
 	
 	echo json_encode($json[$system][$captor], JSON_UNESCAPED_UNICODE);
