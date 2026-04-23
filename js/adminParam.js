@@ -91,13 +91,21 @@ $(document).ready(function() {
 		var log  = $('#mail_log').val();
 		var mdp  = $('#mail_pwd').val();
 
-		$.get('_include/bin_v4/test_mail.php', { host: host, login: log, mdp: mdp })
-			.done(function(raw) {
-				if (raw === 'success') {
+		$.post('_include/bin_v4/test_mail.php', { host: host, login: log, mdp: mdp })
+			.done(function(json) {
+				if (json && json.success) {
 					$.growlValidate(lang.valid.communication);
-				} else {
-					$.growlWarning(lang.error.mailboxDontRespond);
+					return;
 				}
+				var msg = lang.error.mailboxDontRespond;
+				if (json && json.error) {
+					var code = json.error.code;
+					if (code === 'ext_missing')        msg = lang.error.mail.extMissing;
+					else if (code === 'auth_failed')   msg = lang.error.mail.authFailed;
+					else if (code === 'connection_failed') msg = lang.error.mail.connectionFailed;
+					else if (json.error.message)       msg = json.error.message;
+				}
+				$.growlWarning(msg);
 			})
 			.fail(function() { $.growlWarning(lang.error.mailboxDontRespond); });
 	});

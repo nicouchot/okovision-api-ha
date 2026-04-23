@@ -1,90 +1,58 @@
 <?php
 /*
  * Projet : Okovision - Supervision chaudiere OeKofen
+ *
  * Liste les emails IMAP contenant des pièces jointes CSV.
- * Format de retour (calqué sur skydarc/okovision_v2) :
- *   { response: true, mailArray: "{\"1\":\"fichier.csv\", ...}" }   (mailArray est une string JSON)
- *   { response: 'noMail', mailArray: 'nc' }
- *   chaîne vide si connexion IMAP échoue
+ * Requiert une session authentifiée.
+ *
+ * Retourne JSON :
+ *   { "success": true, "mailArray": "{\"1\":\"fichier.csv\", ...}" }
+ *   { "success": true, "mailArray": "{}" }   (boîte vide)
+ *   { "success": false, "error": { "code": "...", "message": "...", "diagnose": {...} } }
  */
 
-require_once __DIR__ . '/../../config.php';
+chdir(__DIR__ . '/../../');
+require_once 'config.php';
 
-error_reporting(0);
+mail::requireLoggedSession();
 
-if (!function_exists('imap_open')) {
-    echo '';
-    exit;
+if (!mail::isAvailable()) {
+    mail::errorResponse('ext_missing', 'Extension IMAP non chargée sur ce serveur PHP');
+}
+
+$conn = mail::open(URL_MAIL, LOGIN_MAIL, PASSWORD_MAIL);
+
+if (!$conn) {
+    $code = mail::classifyOpenFailure();
+    $messages = [
+        'auth_failed'       => 'Identifiants IMAP refusés par le serveur',
+        'connection_failed' => 'Impossible de se connecter au serveur IMAP',
+    ];
+    mail::errorResponse($code, $messages[$code] ?? 'Échec connexion IMAP');
 }
 
 $tmpDir = CONTEXT . '/_tmp/';
 $files  = is_dir($tmpDir) ? scandir($tmpDir) : [];
 $lang   = $config['lang'] ?? 'fr';
 
-$imapConn = @imap_open(URL_MAIL, LOGIN_MAIL, PASSWORD_MAIL);
+$emails = @imap_search($conn, 'ALL');
 
-if (!$imapConn) {
-    echo '';
-    exit;
+if (!$emails) {
+    mail::close($conn);
+    mail::respond(['success' => true, 'mailArray' => '{}']);
 }
 
-$emails = imap_search($imapConn, 'ALL');
+$mailArray = [];
 
-if ($emails) {
-    $output    = ['response' => true];
-    $mailArray = [];
-
-    foreach ($emails as $emailNumber) {
-        $structure = imap_fetchstructure($imapConn, $emailNumber);
-
-        if (!isset($structure->parts) || !count($structure->parts)) {
-            continue;
-        }
-
-        for ($i = 0; $i < count($structure->parts); $i++) {
-            $part       = $structure->parts[$i];
-            $isAttach   = false;
-            $attachName = '';
-
-            if ($part->ifdparameters) {
-                foreach ($part->dparameters as $obj) {
-                    if (strtolower($obj->attribute) === 'filename') {
-                        $isAttach   = true;
-                        $attachName = $obj->value;
-                    }
-                }
-            }
-
-            if ($part->ifparameters) {
-                foreach ($part->parameters as $obj) {
-                    if (strtolower($obj->attribute) === 'name') {
-                        $isAttach   = true;
-                        $attachName = $obj->value;
-                    }
-                }
-            }
-
-            if ($isAttach && $attachName !== '') {
-                $ext = strtolower(pathinfo($attachName, PATHINFO_EXTENSION));
-                if ($ext === 'csv') {
-                    if (array_search($attachName, $files) !== false) {
-                        $label = ($lang === 'fr')
-                            ? $attachName . ' <b class="red">déjà présent</b>'
-                            : $attachName . ' <b class="red">already present</b>';
-                    } else {
-                        $label = $attachName;
-                    }
-                    // Clé = emailNumber (format attendu par le JS : double JSON parse)
-                    $mailArray[$emailNumber] = $label;
-                }
-            }
-        }
+foreach ($emails as $emailNumber) {
+    $parts = mail::listCsvParts($conn, $emailNumber);
+    foreach ($parts as $part) {
+        $mailArray[$emailNumber] = mail::decorateName($part['name'], $files, $lang);
     }
-
-    $output['mailArray'] = json_encode($mailArray, JSON_UNESCAPED_UNICODE);
-    echo json_encode($output, JSON_UNESCAPED_UNICODE);
-} else {
-    echo json_encode(['response' => 'noMail', 'mailArray' => 'nc'], JSON_UNESCAPED_UNICODE);
 }
 
-imap_close($imapConn);
+mail::close($conn);
+mail::respond([
+    'success'   => true,
+    'mailArray' => json_encode($mailArray, JSON_UNESCAPED_UNICODE),
+]);

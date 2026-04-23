@@ -11,6 +11,11 @@ var lang = {
         ipNotPing: "L'adresse Ip ne repond pas",
 	noMail: "pas de mail dans la boite",
 	mailboxDontRespond: "La boite mail ne repond pas",
+	mail: {
+		extMissing:        "Extension IMAP non installée sur ce serveur PHP",
+		connectionFailed:  "Impossible de se connecter au serveur IMAP",
+		authFailed:        "Identifiants IMAP refusés par le serveur"
+	},
 	portNotRespond: "Le port JSON indiqué n'est pas celui de la chaudière",
 	tooldfirmware: "Le firmware de la chaudière est inferieur à la V4",
 	badpwd: "mot de passe erroné",

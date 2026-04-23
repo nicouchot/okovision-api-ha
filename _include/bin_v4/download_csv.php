@@ -1,94 +1,59 @@
 <?php
 /*
-* Projet : Okovision - Supervision chaudiere OeKofen
-* Auteur : skydarc (port nicouchot)
-* Utilisation commerciale interdite sans mon accord
-*/
+ * Projet : Okovision - Supervision chaudiere OeKofen
+ *
+ * Télécharge les pièces jointes CSV des emails sélectionnés
+ * et les dépose dans _tmp/.
+ * Requiert une session authentifiée.
+ *
+ * Paramètre GET : list = "1,2,3"  (numéros de message IMAP, séparés par virgule)
+ *
+ * Retourne JSON :
+ *   { "success": true }
+ *   { "success": false, "error": { ... } }
+ */
 
-	$config = json_decode(file_get_contents("../../config.json"), true);
-	DEFINE('URL_MAIL',$config['url_mail']);
-	DEFINE('LOGIN_MAIL',$config['login_mail']);
-	DEFINE('PASSWORD_MAIL',$config['password_mail']);
+chdir(__DIR__ . '/../../');
+require_once 'config.php';
 
-	$list = $_GET['list'];
-	$listArray = explode(",", $list);
-	$id = 0;
+mail::requireLoggedSession();
 
-	error_reporting(0);
+$listRaw = $_GET['list'] ?? '';
+if ($listRaw === '') {
+    mail::errorResponse('missing_param', 'Paramètre list requis');
+}
 
-	$imap_connection = imap_open(URL_MAIL, LOGIN_MAIL, PASSWORD_MAIL) ;
+$listArray = array_filter(array_map('intval', explode(',', $listRaw)));
+if (empty($listArray)) {
+    mail::errorResponse('missing_param', 'Liste de numéros de messages invalide');
+}
 
-	$emails = imap_search($imap_connection,'ALL');
+if (!mail::isAvailable()) {
+    mail::errorResponse('ext_missing', 'Extension IMAP non chargée sur ce serveur PHP');
+}
 
-	if($emails) {
+$conn = mail::open(URL_MAIL, LOGIN_MAIL, PASSWORD_MAIL);
 
-		$output['response'] = true;
-		/* for every email... */
-		foreach($emails as $value => $email_number) {
+if (!$conn) {
+    $code = mail::classifyOpenFailure();
+    $messages = [
+        'auth_failed'       => 'Identifiants IMAP refusés par le serveur',
+        'connection_failed' => 'Impossible de se connecter au serveur IMAP',
+    ];
+    mail::errorResponse($code, $messages[$code] ?? 'Échec connexion IMAP');
+}
 
-			$structure = imap_fetchstructure($imap_connection,$email_number);
+$tmpDir = CONTEXT . '/_tmp/';
 
-			if($email_number == $listArray[$id]) {
+foreach ($listArray as $emailNumber) {
+    $parts = mail::listCsvParts($conn, $emailNumber);
+    foreach ($parts as $part) {
+        $body = mail::fetchPartBody($conn, $emailNumber, $part['partIndex'], $part['encoding']);
+        if ($body !== '') {
+            file_put_contents($tmpDir . $part['name'], $body);
+        }
+    }
+}
 
-				$attachments = array();
-				if(isset($structure->parts) && count($structure->parts)) {
-
-					for($i = 0; $i < count($structure->parts); $i++) {
-
-						$attachments[$i] = array(
-							'is_attachment' => false,
-							'filename' => '',
-							'name' => '',
-							'attachment' => ''
-						);
-
-						if($structure->parts[$i]->ifdparameters) {
-							foreach($structure->parts[$i]->dparameters as $object) {
-								if(strtolower($object->attribute) == 'filename') {
-									$attachments[$i]['is_attachment'] = true;
-									$attachments[$i]['filename'] = $object->value;
-								}
-							}
-						}
-
-						if($structure->parts[$i]->ifparameters) {
-							foreach($structure->parts[$i]->parameters as $object) {
-								if(strtolower($object->attribute) == 'name') {
-									$attachments[$i]['is_attachment'] = true;
-									$attachments[$i]['name'] = $object->value;
-								}
-							}
-						}
-
-						if($attachments[$i]['is_attachment']) {
-							$attachments[$i]['attachment'] = imap_fetchbody($imap_connection, $email_number, $i+1);
-							if($structure->parts[$i]->encoding == 3) { // 3 = BASE64
-								$attachments[$i]['attachment'] = base64_decode($attachments[$i]['attachment']);
-							}
-							elseif($structure->parts[$i]->encoding == 4) { // 4 = QUOTED-PRINTABLE
-								$attachments[$i]['attachment'] = quoted_printable_decode($attachments[$i]['attachment']);
-							}
-						}
-					}
-				}
-
-				foreach ($attachments as $key => $attachment) {
-					$name = $attachment['name'];
-
-					$contents = $attachment['attachment'];
-
-					if($name != "") {
-						file_put_contents(__DIR__.'/../../_tmp/'.$name, $contents);
-						$id++;
-					}
-				}
-			}
-
-
-		}
-
-		echo 'true';
-
-	} else echo '';
-
-?>
+mail::close($conn);
+mail::respond(['success' => true]);
