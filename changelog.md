@@ -1,5 +1,13 @@
 ## Unrealised
 
+## 2.1.1 — 2026-04-23 — Correctifs admin
+
+- **Fix — `adminParam.php` : paramètre « Mode de récupération du fichier CSV » non persisté pour l'option « firmware v4.00b » (valeur 2).**
+  - Cause : dans `config.php` (et son template `config_sample.php`), la constante `GET_CHAUDIERE_DATA_BY_IP` était définie via `($config['get_data_from_chaudiere']==1)?true:false`, ce qui coerçait la valeur en booléen. La valeur `2` devenait donc `false` au rechargement, cassant toutes les comparaisons `== 2` (option du select non re-sélectionnée, champs JSON port/password masqués, entrée de menu « import mail » absente).
+  - Correctif : conservation de la valeur entière brute via `(int)($config['get_data_from_chaudiere'] ?? 0)`. Compatible avec les tests booléens existants (0 falsy, 1/2 truthy) **et** avec les comparaisons strictes `== 1` et `== 2`.
+  - Fichiers modifiés : `config.php`, `config_sample.php`.
+- **Fix — `js/adminParam.js` : nettoyage d'un bloc mort (lignes 37-41) référençant une variable `val` non définie, provoquant une `ReferenceError` dans le handler `change` de `#oko_typeconnect` (sans impact UI car exécuté après le show/hide).**
+
 ## 2.1.0 — 2026-04-22 — Compatibilité PHP 8.4
 
 Mise en conformité avec PHP 8.4 du code rapatrié de `skydarc/okovision_v2` (mai 2022, PHP 7.x).

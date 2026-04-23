@@ -34,11 +34,6 @@ $(document).ready(function() {
 			$("#form-json-pwd").hide();
 			$("#form-mail").hide();
 		}
-		if (val === 2) {
-			$("#form-json-port, #form-json-pwd").show();
-		} else {
-			$("#form-json-port, #form-json-pwd").hide();
-		}
 	});
 
 	$('#test_oko_ip').click(function() {

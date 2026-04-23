@@ -56,7 +56,7 @@ DEFINE('FTP_USER', '###_FTP_USER_###');
 DEFINE('FTP_PASS', '###_FTP_PASS_###');
 DEFINE('REP_DEPOT', '###_FTP_DEPOT_###');
 // Activation/Desctivation de la recuperation du fichier sur la chaudiere
-DEFINE('GET_CHAUDIERE_DATA_BY_IP', ($config['get_data_from_chaudiere']==1)?true:false); // default -> true //json
+DEFINE('GET_CHAUDIERE_DATA_BY_IP', (int)($config['get_data_from_chaudiere'] ?? 0)); // 0 = USB, 1 = IP (CSV HTML), 2 = IP via JSON (firmware v4.00b)
 // Activation/Desctivation du transfert du fichier de la chaudiere vers une autre serveur en + de celui hebergeant l'application.
 DEFINE('SEND_TO_WEB', ($config['send_to_web']==1)?true:false); // default -> false //json
 //
