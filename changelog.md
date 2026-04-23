@@ -1,5 +1,30 @@
 ## Unrealised
 
+## 2.1.2 — 2026-04-23 — Refonte chargement mails IMAP
+
+Refonte complète du sous-système mail pour corriger le bug de non-fonctionnement sur `develop` et éliminer plusieurs défauts structurels.
+
+**Bug corrigé** : le bouton « test » de la boîte mail (adminParam.php) et la page amImpMail.php retournaient un message d'erreur générique pour toute défaillance IMAP, rendant impossible le diagnostic.
+
+**Root cause identifiée grâce à l'instrumentation** : l'extension `ext/imap` a été retirée du core PHP 8.4 (déplacée vers PECL) et n'est pas bundlée sur le paquet DSM PHP 8.4 du Synology (la case « IMAP » du profil PHP-FPM est un vestige UI sans binaire associé). Contournement immédiat : vhost dev repassé en PHP 8.2. Dette à traiter avant PHP 9 : migrer vers une librairie userland (`ddeboer/imap` ou `webklex/php-imap`).
+
+- **Nouveau : `_include/mail.class.php`** — façade centralisée sur l'extension IMAP.
+  - `mail::open()`, `mail::close()`, `mail::isAvailable()`, `mail::lastError()`, `mail::allErrors()`
+  - `mail::classifyOpenFailure()` — classe l'erreur en `ext_missing` / `auth_failed` / `connection_failed`
+  - `mail::listCsvParts()`, `mail::fetchPartBody()`, `mail::decorateName()` — factorisation du parsing d'attachments (était dupliqué 3×)
+  - `mail::requireLoggedSession()` — session guard commun
+  - `mail::respond()`, `mail::errorResponse()` — réponses JSON structurées uniformes
+
+- **Sécurité** : `test_mail.php`, `download_csv.php`, `delete_mail.php` passent en `require_once config.php` → inaccessibles sans session authentifiée (antérieurement accessibles publiquement).
+
+- **Credentials** : le bouton « Test » mail passe de GET à POST (`$.post`) → mot de passe hors URL (plus dans logs Nginx, header Referer, historique navigateur).
+
+- **UX/Diagnostic** : les 4 endpoints retournent du JSON structuré `{ success, error: { code, message, diagnose } }` à la place d'une chaîne vide ou de `'true'`. Le JS affiche maintenant le message d'erreur spécifique (`lang.error.mail.extMissing`, `.authFailed`, `.connectionFailed`).
+
+- **i18n** : 3 nouveaux labels dans `_langs/fr.text.js` et `_langs/en.text.js` (`error.mail.extMissing`, `.authFailed`, `.connectionFailed`).
+
+- Fichiers modifiés : `_include/mail.class.php` (nouveau), `_include/bin_v4/test_mail.php`, `_include/bin_v4/get_list_mail.php`, `_include/bin_v4/download_csv.php`, `_include/bin_v4/delete_mail.php`, `js/adminParam.js`, `js/amImpMail.js`, `_langs/fr.text.js`, `_langs/en.text.js`, `_include/version.json`.
+
 ## 2.1.1 — 2026-04-23 — Correctifs admin
 
 - **Fix — `adminParam.php` : paramètre « Mode de récupération du fichier CSV » non persisté pour l'option « firmware v4.00b » (valeur 2).**

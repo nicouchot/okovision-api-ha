@@ -7,83 +7,81 @@
 
 $(document).ready(function() {
 
-    // ── Chargement initial de la liste ─────────────────────────────────
-    $.get('_include/bin_v4/get_list_mail.php').done(function(jsonMail) {
+    // ── Helpers ────────────────────────────────────────────────────────────
 
-        if (!jsonMail) {
-            $("#inwork-remotefile").hide();
-            $.growlErreur(lang.error.mailboxDontRespond);
+    function mailErrorMsg(json) {
+        if (!json || !json.error) return lang.error.mailboxDontRespond;
+        var code = json.error.code;
+        if (code === 'ext_missing')        return lang.error.mail.extMissing;
+        if (code === 'auth_failed')        return lang.error.mail.authFailed;
+        if (code === 'connection_failed')  return lang.error.mail.connectionFailed;
+        if (json.error.message)            return json.error.message;
+        return lang.error.mailboxDontRespond;
+    }
+
+    // ── Chargement initial de la liste ─────────────────────────────────────
+    $.get('_include/bin_v4/get_list_mail.php').done(function(json) {
+
+        $("#inwork-remotefile").hide();
+
+        if (!json || !json.success) {
+            $.growlErreur(mailErrorMsg(json));
             return;
         }
 
-        var attachments;
+        var mailList;
         try {
-            attachments = (typeof jsonMail === 'string') ? JSON.parse(jsonMail) : jsonMail;
+            mailList = (typeof json.mailArray === 'string')
+                ? JSON.parse(json.mailArray)
+                : json.mailArray;
         } catch (e) {
-            $("#inwork-remotefile").hide();
             $.growlErreur(lang.error.mailboxDontRespond);
             return;
         }
 
-        if (attachments.response === true) {
-
-            var mailList;
-            try {
-                mailList = (typeof attachments.mailArray === 'string')
-                    ? JSON.parse(attachments.mailArray)
-                    : attachments.mailArray;
-            } catch (e) {
-                $("#inwork-remotefile").hide();
-                $.growlErreur(lang.error.mailboxDontRespond);
-                return;
-            }
-
-            var maxkey;
-
-            $("#inwork-remotefile").hide();
-            $("#listeFichierFromMailBox > tbody").html("");
-
-            // Ligne sentinelle masquée (utilisée par le toggle #index_all)
-            $('#listeFichierFromMailBox > tbody').append(
-                '<tr style="display:none;"><td><input type="checkbox" id="index_0"></td><td></td></tr>'
-            );
-
-            $.each(mailList, function(key, mail) {
-                maxkey = key;
-                $('#listeFichierFromMailBox > tbody').append(
-                    '<tr>' +
-                        '<td><input type="checkbox" id="index_' + key + '" name="' + key + '"> ' + mail + '</td>' +
-                        '<td><button type="button" id="del_mail" class="btn btn-default btn-sm" name="' + key + '">' +
-                            '<span class="glyphicon glyphicon-trash" aria-hidden="true"></span>' +
-                        '</button></td>' +
-                    '</tr>'
-                );
-            });
-
-            if (typeof maxkey !== 'undefined') {
-                $('#listeFichierFromMailBox > tbody').append(
-                    '<tr>' +
-                        '<td><input type="checkbox" id="index_all"> ' + lang.text.importAll + '</td>' +
-                        '<td><button type="button" id="del_mail" class="btn btn-default btn-sm" name="1:' + maxkey + '">' +
-                            '<span class="glyphicon glyphicon-trash" aria-hidden="true"></span>' +
-                        '</button></td>' +
-                    '</tr>'
-                );
-            }
-
-        } else if (attachments.response === 'noMail') {
-            $("#inwork-remotefile").hide();
+        if (!mailList || Object.keys(mailList).length === 0) {
             $.growlErreur(lang.error.noMail);
-        } else {
-            $("#inwork-remotefile").hide();
-            $.growlErreur(lang.error.mailboxDontRespond);
+            return;
         }
+
+        var maxkey;
+
+        $("#listeFichierFromMailBox > tbody").html("");
+
+        // Ligne sentinelle masquée (utilisée par le toggle #index_all)
+        $('#listeFichierFromMailBox > tbody').append(
+            '<tr style="display:none;"><td><input type="checkbox" id="index_0"></td><td></td></tr>'
+        );
+
+        $.each(mailList, function(key, mail) {
+            maxkey = key;
+            $('#listeFichierFromMailBox > tbody').append(
+                '<tr>' +
+                    '<td><input type="checkbox" id="index_' + key + '" name="' + key + '"> ' + mail + '</td>' +
+                    '<td><button type="button" id="del_mail" class="btn btn-default btn-sm" name="' + key + '">' +
+                        '<span class="glyphicon glyphicon-trash" aria-hidden="true"></span>' +
+                    '</button></td>' +
+                '</tr>'
+            );
+        });
+
+        if (typeof maxkey !== 'undefined') {
+            $('#listeFichierFromMailBox > tbody').append(
+                '<tr>' +
+                    '<td><input type="checkbox" id="index_all"> ' + lang.text.importAll + '</td>' +
+                    '<td><button type="button" id="del_mail" class="btn btn-default btn-sm" name="1:' + maxkey + '">' +
+                        '<span class="glyphicon glyphicon-trash" aria-hidden="true"></span>' +
+                    '</button></td>' +
+                '</tr>'
+            );
+        }
+
     }).fail(function() {
         $("#inwork-remotefile").hide();
         $.growlErreur(lang.error.mailboxDontRespond);
     });
 
-    // ── Toggle "Tout sélectionner" via la case #index_all ──────────────
+    // ── Toggle "Tout sélectionner" via la case #index_all ──────────────────
     $("body").on("click", "#index_all", function() {
         if ($('#index_0').is(':checked')) {
             $('input:checkbox').prop('checked', false);
@@ -92,7 +90,7 @@ $(document).ready(function() {
         }
     });
 
-    // ── Import de la sélection ─────────────────────────────────────────
+    // ── Import de la sélection ─────────────────────────────────────────────
     $("#bt_import").click(function() {
         var mailSelected = [];
         $.each($("input:checkbox:checked"), function() {
@@ -102,24 +100,35 @@ $(document).ready(function() {
         });
         var list = mailSelected.join(",");
 
-        if (list !== "") {
-            $.get('_include/bin_v4/download_csv.php?list=' + list).done(function(raw) {
-                if (raw == 'true') $.growlValidate(lang.valid.csvImport);
-                else $.growlErreur(lang.error.csvImport);
-            });
-        } else {
+        if (list === "") {
             $.growlErreur(lang.error.noSelect);
+            return;
         }
+
+        $.get('_include/bin_v4/download_csv.php?list=' + list).done(function(json) {
+            if (json && json.success) {
+                $.growlValidate(lang.valid.csvImport);
+            } else {
+                $.growlErreur(mailErrorMsg(json));
+            }
+        }).fail(function() {
+            $.growlErreur(lang.error.csvImport);
+        });
     });
 
-    // ── Suppression d'un mail (bouton poubelle par ligne) ──────────────
+    // ── Suppression d'un mail (bouton poubelle par ligne) ──────────────────
     $("body").on("click", "[id^='del_mail']:button", function() {
         var key = $(this).attr('name');
 
-        $.get('_include/bin_v4/delete_mail.php?list=' + key).done(function(raw) {
-            if (raw == 'true') $.growlValidate(lang.valid.delMail);
-            else $.growlErreur(lang.error.delMail);
-
+        $.get('_include/bin_v4/delete_mail.php?list=' + key).done(function(json) {
+            if (json && json.success) {
+                $.growlValidate(lang.valid.delMail);
+            } else {
+                $.growlErreur(mailErrorMsg(json));
+            }
+            setTimeout(function() { location.reload(true); }, 2000);
+        }).fail(function() {
+            $.growlErreur(lang.error.delMail);
             setTimeout(function() { location.reload(true); }, 2000);
         });
     });

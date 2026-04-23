@@ -1,26 +1,47 @@
 <?php
 /*
  * Projet : Okovision - Supervision chaudiere OeKofen
- * Teste la connexion IMAP avec les paramètres fournis en GET.
- * Retourne 'success' si OK, chaîne vide sinon.
+ *
+ * Teste la connexion IMAP avec les paramètres fournis.
+ * Méthode : POST (credentials hors URL).
+ * Requiert une session authentifiée.
+ *
+ * Retourne JSON :
+ *   { "success": true }
+ *   { "success": false, "error": { "code": "...", "message": "...", "diagnose": {...} } }
  */
 
-error_reporting(0);
+chdir(__DIR__ . '/../../');
+require_once 'config.php';
 
-$host  = $_GET['host']  ?? '';
-$login = $_GET['login'] ?? '';
-$mdp   = $_GET['mdp']   ?? '';
+mail::requireLoggedSession();
 
-if (!function_exists('imap_open') || $host === '' || $login === '' || $mdp === '') {
-    echo '';
-    exit;
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    mail::errorResponse('bad_request', 'POST requis', 405);
 }
 
-$conn = @imap_open($host, $login, $mdp);
+$host  = trim($_POST['host']  ?? '');
+$login = trim($_POST['login'] ?? '');
+$mdp   = $_POST['mdp']        ?? '';
 
-if ($conn) {
-    imap_close($conn);
-    echo 'success';
-} else {
-    echo '';
+if ($host === '' || $login === '' || $mdp === '') {
+    mail::errorResponse('missing_param', 'Paramètres host, login et mdp requis');
 }
+
+if (!mail::isAvailable()) {
+    mail::errorResponse('ext_missing', 'Extension IMAP non chargée sur ce serveur PHP');
+}
+
+$conn = mail::open($host, $login, $mdp);
+
+if (!$conn) {
+    $code = mail::classifyOpenFailure();
+    $messages = [
+        'auth_failed'       => 'Identifiants IMAP refusés par le serveur',
+        'connection_failed' => 'Impossible de se connecter au serveur IMAP',
+    ];
+    mail::errorResponse($code, $messages[$code] ?? 'Échec connexion IMAP');
+}
+
+mail::close($conn);
+mail::respond(['success' => true]);

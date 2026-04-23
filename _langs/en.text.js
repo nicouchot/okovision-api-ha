@@ -11,6 +11,11 @@ var lang = {
         ipNotPing: "Ip address is not responding",
         noMail: "no mail in mailBox",
 	mailboxDontRespond: "No response from mailBox",
+	mail: {
+		extMissing:        "IMAP extension not installed on this PHP server",
+		connectionFailed:  "Unable to connect to the IMAP server",
+		authFailed:        "IMAP credentials rejected by the server"
+	},
 	portNotRespond: "JSON port is not boiler's port",
 	tooldfirmware: "Boiler firmware is lower than V4",
 	badpwd: "MailBox password error",

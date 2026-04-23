@@ -1,111 +1,71 @@
 <?php
 /*
-* Projet : Okovision - Supervision chaudiere OeKofen
-* Auteur : skydarc (port nicouchot)
-* Utilisation commerciale interdite sans mon accord
-*/
+ * Projet : Okovision - Supervision chaudiere OeKofen
+ *
+ * Archive la pièce jointe CSV de chaque message sélectionné dans archives/,
+ * puis supprime le ou les messages de la boîte IMAP.
+ * Requiert une session authentifiée.
+ *
+ * Paramètre GET : list — deux formats acceptés :
+ *   "1,2,3"  → liste explicite de numéros de messages
+ *   "1:N"    → plage (supprime les N premiers messages, de 1 à N)
+ *
+ * Retourne JSON :
+ *   { "success": true }
+ *   { "success": false, "error": { ... } }
+ */
 
-	$config = json_decode(file_get_contents("../../config.json"), true);
-	DEFINE('URL_MAIL',$config['url_mail']);
-	DEFINE('LOGIN_MAIL',$config['login_mail']);
-	DEFINE('PASSWORD_MAIL',$config['password_mail']);
+chdir(__DIR__ . '/../../');
+require_once 'config.php';
 
-	$list = $_GET['list'];
-	$listArray = explode(":", $list);
+mail::requireLoggedSession();
 
-	if( sizeof($listArray) == 2) {
-		for($i = 0 ; $i < intval($listArray[1]) ; $i++ ) {
-			$listMail[$i] = $i+1;
-		}
+$listRaw = $_GET['list'] ?? '';
+if ($listRaw === '') {
+    mail::errorResponse('missing_param', 'Paramètre list requis');
+}
 
-		$listArray = $listMail;
-		$listMail = explode(":", $list);
-	}
+// Résolution des deux formats ─────────────────────────────────────────────
+// Format plage "1:N" → génère la liste [1, 2, …, N]
+if (preg_match('/^\d+:\d+$/', $listRaw)) {
+    [$from, $to] = explode(':', $listRaw);
+    $listArray = range((int) $from, (int) $to);
+} else {
+    $listArray = array_filter(array_map('intval', explode(',', $listRaw)));
+}
 
-	$id = 0;
+if (empty($listArray)) {
+    mail::errorResponse('missing_param', 'Liste de numéros de messages invalide');
+}
 
-	error_reporting(0);
+if (!mail::isAvailable()) {
+    mail::errorResponse('ext_missing', 'Extension IMAP non chargée sur ce serveur PHP');
+}
 
-	$imap_connection = imap_open(URL_MAIL, LOGIN_MAIL, PASSWORD_MAIL) ;
+$conn = mail::open(URL_MAIL, LOGIN_MAIL, PASSWORD_MAIL);
 
-	$emails = imap_search($imap_connection,'ALL');
+if (!$conn) {
+    $code = mail::classifyOpenFailure();
+    $messages = [
+        'auth_failed'       => 'Identifiants IMAP refusés par le serveur',
+        'connection_failed' => 'Impossible de se connecter au serveur IMAP',
+    ];
+    mail::errorResponse($code, $messages[$code] ?? 'Échec connexion IMAP');
+}
 
-	if($emails) {
+$archiveDir = CONTEXT . '/archives/';
 
-		$output['response'] = true;
-		/* for every email... */
-		foreach($emails as $value => $email_number) {
+foreach ($listArray as $emailNumber) {
+    $parts = mail::listCsvParts($conn, $emailNumber);
+    foreach ($parts as $part) {
+        $body = mail::fetchPartBody($conn, $emailNumber, $part['partIndex'], $part['encoding']);
+        if ($body !== '') {
+            file_put_contents($archiveDir . $part['name'], $body);
+        }
+    }
+    @imap_delete($conn, (string) $emailNumber);
+}
 
-			$structure = imap_fetchstructure($imap_connection,$email_number);
-
-			if($email_number == $listArray[$id]) {
-
-				$attachments = array();
-				if(isset($structure->parts) && count($structure->parts)) {
-
-					for($i = 0; $i < count($structure->parts); $i++) {
-
-						$attachments[$i] = array(
-							'is_attachment' => false,
-							'filename' => '',
-							'name' => '',
-							'attachment' => ''
-						);
-
-						if($structure->parts[$i]->ifdparameters) {
-							foreach($structure->parts[$i]->dparameters as $object) {
-								if(strtolower($object->attribute) == 'filename') {
-									$attachments[$i]['is_attachment'] = true;
-									$attachments[$i]['filename'] = $object->value;
-								}
-							}
-						}
-
-						if($structure->parts[$i]->ifparameters) {
-							foreach($structure->parts[$i]->parameters as $object) {
-								if(strtolower($object->attribute) == 'name') {
-									$attachments[$i]['is_attachment'] = true;
-									$attachments[$i]['name'] = $object->value;
-								}
-							}
-						}
-
-						if($attachments[$i]['is_attachment']) {
-							$attachments[$i]['attachment'] = imap_fetchbody($imap_connection, $email_number, $i+1);
-							if($structure->parts[$i]->encoding == 3) { // 3 = BASE64
-								$attachments[$i]['attachment'] = base64_decode($attachments[$i]['attachment']);
-							}
-							elseif($structure->parts[$i]->encoding == 4) { // 4 = QUOTED-PRINTABLE
-								$attachments[$i]['attachment'] = quoted_printable_decode($attachments[$i]['attachment']);
-							}
-						}
-					}
-				}
-
-				foreach ($attachments as $key => $attachment) {
-					$name = $attachment['name'];
-
-					$contents = $attachment['attachment'];
-
-					if($name != "") {
-						file_put_contents(__DIR__.'/../../archives/'.$name, $contents);
-
-						if( sizeof($listArray) == 1 ) {
-							imap_delete($imap_connection, $listArray[$id]);
-						}
-						$id++;
-					}
-				}
-			}
-		}
-
-		if( sizeof($listArray) > 1 ) {
-			imap_delete($imap_connection, $list);
-		}
-		imap_expunge($imap_connection);
-
-		echo 'true';
-
-	} else echo '';
-
-?>
+@imap_expunge($conn);
+mail::close($conn);
+mail::respond(['success' => true]);
