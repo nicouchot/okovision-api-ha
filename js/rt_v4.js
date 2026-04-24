@@ -62,10 +62,16 @@ $(document).ready(function() {
 
 		$.get('_include/bin_v4/test_boiler.php').done(function(jsdata) {
 
-			const jsArray = JSON.parse(jsdata);
-			const jsResp = JSON.parse(jsArray.data);
+			var jsArray;
+			try { jsArray = JSON.parse(jsdata); } catch(e) {
+				$('#logginprogress').hide();
+				$.growlErreur(lang.error.connectBoiler);
+				return;
+			}
 
             if (jsArray.response) {
+
+				const jsResp = JSON.parse(jsArray.data);
 
                 $.each(jsResp, function(key1, val1) {
                     
@@ -134,6 +140,9 @@ $(document).ready(function() {
                 $('#logginprogress').hide();
                 $.growlErreur(lang.error.connectBoiler);
             }
+        }).fail(function() {
+            $('#logginprogress').hide();
+            $.growlErreur(lang.error.connectBoiler);
         });
     };
 

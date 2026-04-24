@@ -1,50 +1,63 @@
-<?php 
+<?php
 /*
 * Projet : Okovision - Supervision chaudiere OeKofen
 * Auteur : skydarc
 * Utilisation commerciale interdite sans mon accord
 */
-	
-	$ip = $_GET['ip'];
-	$port = $_GET['port'];
-	$mdp = $_GET['mdp'];
-	
-	$json = '';
-	
-	if ($fp = @fsockopen($ip, 80, $errCode, $errStr, 1)) {
-        // It worked
-        
-		$ch = curl_init('http://'.$ip.':'.$port.'/'.$mdp.'/');
-		curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type:application/json charset=UTF-8'));
 
-		// Return response instead of outputting
-		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+declare(strict_types=1);
 
-		// Execute the POST request
-		$json = mb_convert_encoding(curl_exec($ch), 'UTF-8', 'ISO-8859-1');
+$ip   = isset($_GET['ip'])   ? (string) $_GET['ip']   : '';
+$port = isset($_GET['port']) ? (string) $_GET['port'] : '';
+$mdp  = isset($_GET['mdp'])  ? (string) $_GET['mdp']  : '';
 
-		$resp['version'] = substr($json, strpos($json, '  V')+3, 5);
-		
-		sleep(3);
-		
-		$ch = curl_init('http://'.$ip.':'.$port.'/'.$mdp.'/all');
-		curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type:application/json charset=UTF-8'));
+if ($ip === '' || $port === '' || $mdp === '') {
+    echo json_encode(['response' => false, 'error' => 'missing_params']);
+    exit;
+}
 
-		// Return response instead of outputting
-		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+$errCode = 0;
+$errStr  = '';
+$fp = @fsockopen($ip, 80, $errCode, $errStr, 1);
 
-		// Execute the POST request
-		$json = mb_convert_encoding(curl_exec($ch), 'UTF-8', 'ISO-8859-1');
+if ($fp === false) {
+    echo json_encode(['response' => false, 'error' => 'unreachable']);
+    exit;
+}
+fclose($fp);
 
+$resp = ['response' => false];
 
-		$resp['data'] = $json;
-		
-		print_r(json_encode($resp, JSON_HEX_AMP));
-		
-    } else {
-		
-        echo "";
-    }
-    @fclose($fp);
-	
-?>
+$ch = curl_init('http://'.$ip.':'.$port.'/'.$mdp.'/');
+curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type:application/json charset=UTF-8']);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+$raw = curl_exec($ch);
+curl_close($ch);
+
+if ($raw === false) {
+    echo json_encode(['response' => false, 'error' => 'curl_failed']);
+    exit;
+}
+
+$json = mb_convert_encoding((string) $raw, 'UTF-8', 'ISO-8859-1');
+$posV = strpos($json, '  V');
+
+if ($posV === false) {
+    echo json_encode(['response' => false, 'error' => 'bad_response']);
+    exit;
+}
+
+$resp['version']  = substr($json, $posV + 3, 5);
+$resp['response'] = true;
+
+sleep(3);
+
+$ch = curl_init('http://'.$ip.':'.$port.'/'.$mdp.'/all');
+curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type:application/json charset=UTF-8']);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+$raw = curl_exec($ch);
+curl_close($ch);
+
+$resp['data'] = ($raw === false) ? '' : mb_convert_encoding((string) $raw, 'UTF-8', 'ISO-8859-1');
+
+echo json_encode($resp, JSON_HEX_AMP);

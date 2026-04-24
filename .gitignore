@@ -50,7 +50,7 @@ config.json
 Thumbs.db
 import.csv
 matrice.csv
-test*
+/test*
 _tmp/*.sql
 _tmp/*.txt
 php.ini

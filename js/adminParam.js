@@ -67,7 +67,8 @@ $(document).ready(function() {
 	
 	$('#test_oko_json').click(function() {
 
-
+		var ip   = $('#oko_ip').val();
+		var port = $('#oko_json_port').val();
 		var mdp  = $('#oko_json_pwd').val();
 
 		$.get('_include/bin_v4/get_softVersion.php', { ip: ip, port: port, mdp: mdp })
