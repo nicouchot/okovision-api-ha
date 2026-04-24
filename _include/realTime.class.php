@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
 * Projet : Okovision - Supervision chaudiere OeKofen
 * Auteur : Stawen Dronek

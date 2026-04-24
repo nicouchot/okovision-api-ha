@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 class session extends connectDb
 {
     private $lang = 'en';

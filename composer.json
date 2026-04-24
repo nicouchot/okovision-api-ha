@@ -1,0 +1,29 @@
+{
+    "name": "nicouchot/okovision-ha-api",
+    "type": "project",
+    "description": "Supervision chaudière OeKofen – fork personnel",
+    "require": {
+        "php": "^8.4"
+    },
+    "require-dev": {
+        "phpstan/phpstan": "^2.0",
+        "squizlabs/php_codesniffer": "^3.11",
+        "friendsofphp/php-cs-fixer": "^3.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Okovision\\": "_include/"
+        }
+    },
+    "scripts": {
+        "check": [
+            "@phpstan",
+            "@phpcs"
+        ],
+        "phpstan": "phpstan analyse --memory-limit=256M",
+        "phpcs": "phpcs --standard=PSR12 _include/"
+    },
+    "config": {
+        "optimize-autoloader": true
+    }
+}

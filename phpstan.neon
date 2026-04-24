@@ -1,0 +1,9 @@
+parameters:
+    level: 3
+    paths:
+        - _include/
+    excludePaths:
+        - _include/AutoUpdate.class.php
+        - _include/UploadHandler.class.php
+    checkMissingIterableValueType: false
+    treatPhpDocTypesAsCertain: false

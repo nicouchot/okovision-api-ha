@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 class version extends expression
 {
     private $version = '0.0.0';

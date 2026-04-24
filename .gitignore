@@ -35,6 +35,11 @@
 ehthumbs.db
 Thumbs.db
 
+# Composer #
+############
+/vendor/
+composer.lock
+
 # Custom Project file #
 #######################
 *.csv

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 class gstGraphique extends connectDb
 {
     public function __construct()

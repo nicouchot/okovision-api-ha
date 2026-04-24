@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * Logger class.
  * Usefull to log notices, warnings, errors or fatal errors into a logfile.
