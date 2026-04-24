@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 class session extends connectDb
 {
-    private $lang = 'en';
-    private $dico;
-    private static $_instance;
+    private string $lang = 'en';
+    private array $dico = [];
+    private static ?self $_instance = null;
 
     public function __construct()
     {
@@ -18,78 +18,73 @@ class session extends connectDb
 
         $cf = json_decode(file_get_contents('config.json'), true);
 
-        $this->setLang(
-            // by default English
-            isset($cf['lang']) ? $cf['lang'] : 'en'
-        );
-
+        $this->setLang(isset($cf['lang']) ? $cf['lang'] : 'en');
         $this->dico = $this->getDictionnary($this->getLang());
     }
 
     public function __destruct()
     {
-        //session_destroy();
-        //if (DEBUG) session_destroy();
     }
 
-    // Magic method clone is empty to prevent duplication of connection
     private function __clone()
     {
     }
 
-    public static function getInstance()
+    public static function getInstance(): static
     {
-        if (!self::$_instance) { // If no instance then make one
+        if (self::$_instance === null) {
             self::$_instance = new self();
         }
 
         return self::$_instance;
     }
 
-    public function getLabel($label)
+    public function getLabel(string $label): string
     {
-        return $this->dico[$label];
+        return (string) ($this->dico[$label] ?? '');
     }
 
-    public function getLang()
+    public function getLang(): string
     {
         return $this->lang;
     }
 
-    public function setVar($key, $value)
+    public function setVar(string $key, mixed $value): void
     {
         $_SESSION[$key] = $value;
     }
 
-    public function exist($key)
+    public function exist(string $key): bool
     {
         return isset($_SESSION[$key]);
     }
 
-    public function getVar($key)
+    public function getVar(string $key): mixed
     {
-        return isset($_SESSION[$key]) ? $_SESSION[$key] : null;
+        return $_SESSION[$key] ?? null;
     }
 
-    public function deleteVar($key)
+    public function deleteVar(string $key): void
     {
         unset($_SESSION[$key]);
     }
 
-    public function getSensorName($sensor)
+    public function getSensorName(string $sensor): string
     {
-        return $this->dico[$sensor];
+        return (string) ($this->dico[$sensor] ?? '');
     }
 
-    private function getDictionnary($lg)
+    private function getDictionnary(string $lg): array
     {
         $file = '_langs/'.$lg.'.text.json';
         if (file_exists($file)) {
             return (array) json_decode(file_get_contents($file));
         }
+
+        return [];
     }
 
-    private function setLang($lg)
+    private function setLang(string $lg): void
     {
         $this->lang = $lg;
     }

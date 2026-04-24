@@ -10,14 +10,14 @@ declare(strict_types=1);
 
 class timeExec
 {
-    private $timestart;
+    private float $timestart;
 
     public function __construct()
     {
         $this->timestart = microtime(true);
     }
 
-    public function getTime()
+    public function getTime(): string
     {
         return number_format(microtime(true) - $this->timestart, 3);
     }

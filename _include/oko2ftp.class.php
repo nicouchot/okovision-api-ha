@@ -10,14 +10,14 @@ declare(strict_types=1);
 
 class oko2ftp
 {
-    private $log;
+    private logger $log;
 
     public function __construct()
     {
-        $this->log = new Logger();
+        $this->log = new logger();
     }
 
-    public function send2web()
+    public function send2web(): void
     {
         $this->log->info('Send2Web | envoi du fichier vers '.FTP_SERVEUR);
 

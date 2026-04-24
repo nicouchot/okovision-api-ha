@@ -6,15 +6,15 @@ declare(strict_types=1);
 
 class SemVerException extends Exception
 {
-    protected $version;
+    protected string $version;
 
-    public function __construct($message, $version)
+    public function __construct(string $message, string $version)
     {
         $this->version = $version;
         parent::__construct($message.' [['.$version.']]');
     }
 
-    public function getVersion()
+    public function getVersion(): string
     {
         return $this->version;
     }

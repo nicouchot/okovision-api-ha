@@ -10,7 +10,7 @@ declare(strict_types=1);
 
 class administration extends connectDb
 {
-    private $_urlApi = 'http://api.okovision.dronek.com';
+    private string $_urlApi = 'http://api.okovision.dronek.com';
 
     public function __construct()
     {

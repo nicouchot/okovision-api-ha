@@ -20,77 +20,87 @@ class capteur extends connectDb
         parent::__destruct();
     }
 
-    /**
-     * Function geting all sensor.
-     *
-     * @return json (id, name, position_column_csv, column_oko, original_name, type)
-     */
-    public function getAll()
+    public function getAll(): array
     {
-        $result = $this->query('select id, name, position_column_csv, column_oko, original_name, type from oko_capteur;');
-        while ($row = $result->fetch_assoc()) {
-            $rows[] = $row;
+        $rows = [];
+        $result = $this->query('SELECT id, name, position_column_csv, column_oko, original_name, type FROM oko_capteur');
+        if ($result instanceof \mysqli_result) {
+            while ($row = $result->fetch_assoc()) {
+                $rows[] = $row;
+            }
         }
 
         return $rows;
     }
 
-    /**
-     * Function geting on sensor  by is own id.
-     *
-     * param integer id
-     *
-     * @param mixed $id
-     *
-     * @return json (id, name, position_column_csv, column_oko, original_name, type)
-     */
-    public function get($id)
+    public function get(int $id): array
     {
-        $capteur = [];
-        if (null != $id) {
-            $result = $this->query('select id, name, position_column_csv, column_oko, original_name, type from oko_capteur where id= '.$id);
-            $capteur = $result->fetch_assoc();
+        $result = $this->prepare(
+            'SELECT id, name, position_column_csv, column_oko, original_name, type FROM oko_capteur WHERE id=?',
+            [$id]
+        );
+
+        if ($result instanceof \mysqli_result) {
+            return (array) $result->fetch_assoc();
         }
 
-        return $capteur;
+        return [];
     }
 
-    public function getForImportCsv()
+    public function getForImportCsv(): array
     {
-        $result = $this->query('select id, name, position_column_csv, column_oko, original_name, type from oko_capteur where position_column_csv <> -1;');
-        while ($row = $result->fetch_assoc()) {
-            $r[$row['position_column_csv']] = $row;
+        $r = [];
+        $result = $this->query('SELECT id, name, position_column_csv, column_oko, original_name, type FROM oko_capteur WHERE position_column_csv <> -1');
+        if ($result instanceof \mysqli_result) {
+            while ($row = $result->fetch_assoc()) {
+                $r[$row['position_column_csv']] = $row;
+            }
         }
 
         return $r;
     }
 
-    public function getMatrix()
+    public function getMatrix(): array
     {
-        $result = $this->query("select id, name, position_column_csv, column_oko, original_name, type from oko_capteur where type <> 'startCycle' order by position_column_csv asc;");
-        while ($row = $result->fetch_object()) {
-            $r[$row->original_name] = $row;
+        $r = [];
+        $result = $this->query("SELECT id, name, position_column_csv, column_oko, original_name, type FROM oko_capteur WHERE type <> 'startCycle' ORDER BY position_column_csv ASC");
+        if ($result instanceof \mysqli_result) {
+            while ($row = $result->fetch_object()) {
+                $r[$row->original_name] = $row;
+            }
         }
 
         return $r;
     }
 
-    public function getByType($type = '')
+    public function getByType(string $type = ''): ?array
     {
-        if ('' != $type) {
-            $result = $this->query("select id, name, position_column_csv, column_oko, original_name, type from oko_capteur where type = '".$type."';");
+        if ($type === '') {
+            return null;
+        }
 
+        $result = $this->prepare(
+            'SELECT id, name, position_column_csv, column_oko, original_name, type FROM oko_capteur WHERE type=?',
+            [$type]
+        );
+
+        if ($result instanceof \mysqli_result) {
             return $result->fetch_assoc();
         }
+
+        return null;
     }
 
-    public function getLastColumnOko()
+    public function getLastColumnOko(): int
     {
-        //$result = $this->query("select max(column_oko) as num from oko_capteur where type <> 'startCycle';");
-        $result = $this->query('select max(column_oko) as num from oko_capteur;');
-        $r = $result->fetch_object();
-        $this->log->debug('Class '.__CLASS__.' | '.__FUNCTION__.' | Update oko_capteur | '.$r->num);
+        $result = $this->query('SELECT MAX(column_oko) AS num FROM oko_capteur');
+        if ($result instanceof \mysqli_result) {
+            $r = $result->fetch_object();
+            $this->log->debug('Class '.__CLASS__.' | '.__FUNCTION__.' | '.$r->num);
 
-        return $r->num;
+            return (int) $r->num;
+        }
+
+        return 0;
     }
 }

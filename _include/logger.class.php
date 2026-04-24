@@ -18,159 +18,91 @@ class logger
     const FATAL = 'FATAL  ';
     const DEBUG = 'DEBUG  ';
 
-    private $logfilehandle;
+    private mixed $logfilehandle = null;
 
-    /**
-     * Contructor of Logger.
-     * Opens the new logfile.
-     *
-     * @param string $logfile is the path to a logfile
-     */
     public function __construct()
     {
-        if (null == $this->logfilehandle) {
+        if ($this->logfilehandle === null) {
             $this->openLogFile(LOGFILE);
         }
     }
 
-    /**
-     * Destructor of Logger.
-     */
     public function __destruct()
     {
         $this->closeLogFile();
     }
 
     /**
-     * Logs the message into the logfile.
-     *
-     * @param string $message     message to write into the logfile
-     * @param int    $messageType (optional) urgency of the messagee. Possible constants are: notice, warning, error, fatal. Default value: warning
-     *
      * @throws LogFileNotOpenException
-     * @throws NotAStringException
-     * @throws NotAIntegerException
      * @throws InvalidMessageTypeException
      */
-    public function log($message, $messageType = Logger::WARNING)
+    public function log(string $message, string $messageType = self::WARNING): void
     {
-        if (null == $this->logfilehandle) {
+        if ($this->logfilehandle === null) {
             throw new LogFileNotOpenException('Logfile is not opened.');
         }
-        if (!is_string($message)) {
-            throw new NotAStringException('$message is not a string');
-        }
-        if (Logger::NOTICE != $messageType && Logger::WARNING != $messageType && Logger::ERROR != $messageType && Logger::FATAL != $messageType && Logger::DEBUG != $messageType) {
+        if (!in_array($messageType, [self::NOTICE, self::WARNING, self::ERROR, self::FATAL, self::DEBUG], true)) {
             throw new InvalidMessageTypeException('Wrong $messagetype given');
         }
         $this->writeToLogFile($this->getTime().' | '.$messageType.' | '.$message);
     }
 
-    /**
-     * Closes the current logfile.
-     */
-    public function closeLogFile()
+    public function closeLogFile(): void
     {
-        if (null != $this->logfilehandle) {
+        if ($this->logfilehandle !== null) {
             fclose($this->logfilehandle);
             $this->logfilehandle = null;
         }
     }
 
-    /**
-     * Opens a given logfile and closes the old one before, if another logfile was opened before.
-     *
-     * @param string $logfile is a path to a logfile
-     *
-     * @throws LogFileOpenErrorException
-     */
-    public function openLogFile($logfile)
+    /** @throws LogFileOpenErrorException */
+    public function openLogFile(string $logfile): void
     {
-        $this->closeLogFile(); //close old logfile if opened;
+        $this->closeLogFile();
 
-        $this->logfilehandle = @fopen($logfile, 'a');
-
-        if (!$this->logfilehandle) {
+        $handle = fopen($logfile, 'a');
+        if ($handle === false) {
             throw new LogFileOpenErrorException('Could not open Logfile in append-mode');
         }
+        $this->logfilehandle = $handle;
     }
 
-    /**
-     * Convenience function to wrap logger->log($message,$messagetype);.
-     *
-     * @param string $message
-     */
-    public function info($message)
+    public function info(string $message): void
     {
-        $this->log($message, Logger::NOTICE);
+        $this->log($message, self::NOTICE);
     }
 
-    /**
-     * Convenience function to wrap logger->log($message,$messagetype);.
-     *
-     * @param string $message
-     */
-    public function warn($message)
+    public function warn(string $message): void
     {
-        $this->log($message, Logger::WARNING);
+        $this->log($message, self::WARNING);
     }
 
-    /**
-     * Convenience function to wrap logger->log($message,$messagetype);.
-     *
-     * @param string $message
-     */
-    public function error($message)
+    public function error(string $message): void
     {
-        $this->log($message, Logger::ERROR);
+        $this->log($message, self::ERROR);
     }
 
-    /**
-     * Convenience function to wrap logger->log($message,$messagetype);.
-     *
-     * @param string $message
-     */
-    public function fatal($message)
+    public function fatal(string $message): void
     {
-        $this->log($message, Logger::FATAL);
+        $this->log($message, self::FATAL);
     }
 
-    /**
-     * debug.
-     *
-     * @param string $message
-     */
-    public function debug($message)
+    public function debug(string $message): void
     {
         if (DEBUG) {
-            $this->log($message, Logger::DEBUG);
-            //if (VIEW_DEBUG) print_r ('<pre>'.$message.'</pre>');
+            $this->log($message, self::DEBUG);
         }
     }
 
-    /**
-     * Writes content to the logfile.
-     *
-     * @param string $message
-     */
-    private function writeToLogFile($message)
+    private function writeToLogFile(string $message): void
     {
         flock($this->logfilehandle, LOCK_EX);
         fwrite($this->logfilehandle, $message."\n");
         flock($this->logfilehandle, LOCK_UN);
     }
 
-    /**
-     * Returns the current timestamp in dd.mm.YYYY - HH:MM:SS format.
-     *
-     * @return string with the current date
-     */
-    private function getTime()
+    private function getTime(): string
     {
-        //$date = new datetime("now", new DateTimeZone('Europe/Paris'));
-        $date = new datetime('now');
-
-        return $date->format('d.m.Y | H:i:s');
-        //return date("d.m.Y | H:i:s");
+        return (new DateTime('now'))->format('d.m.Y | H:i:s');
     }
 }

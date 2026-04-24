@@ -4,19 +4,19 @@ declare(strict_types=1);
 
 class version extends expression
 {
-    private $version = '0.0.0';
+    private string $version = '0.0.0';
 
-    private $major = '0';
+    private string $major = '0';
 
-    private $minor = '0';
+    private string $minor = '0';
 
-    private $patch = '0';
+    private string $patch = '0';
 
-    private $build = '';
+    private ?string $build = '';
 
-    private $prtag = '';
+    private string $prtag = '';
 
-    private $log = '';
+    private logger $log;
 
     /**
      * Initializes the version object with a simple version.

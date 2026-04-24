@@ -10,54 +10,46 @@ declare(strict_types=1);
 
 class connectDb
 {
-    protected $log;
+    protected logger $log;
 
-    private $db;
-    private $_ip = BDD_IP;
-    private $_user = BDD_USER;
-    private $_pass = BDD_PASS;
-    private $_schema = BDD_SCHEMA;
+    private ?mysqli $db = null;
+    private string $_ip = BDD_IP;
+    private string $_user = BDD_USER;
+    private string $_pass = BDD_PASS;
+    private string $_schema = BDD_SCHEMA;
 
-    private static $_instance; //The single instance
+    private static ?self $_instance = null;
 
     public function __construct()
     {
         $this->log = new logger();
     }
 
-    // Destructor
     public function __destruct()
     {
-        //$this->disconnect();
     }
 
-    // Magic method clone is empty to prevent duplication of connection
     private function __clone()
     {
     }
 
-    // Get mysqli connection
-    protected function getConnection()
+    protected function getConnection(): mysqli
     {
-        if (null == $this->db) {
+        if ($this->db === null) {
             $this->connect();
         }
 
         return $this->db;
     }
 
-    protected function realEscapeString($s)
+    protected function realEscapeString(string $s): string
     {
-        $con = self::getInstance()->getConnection();
-
-        return $con->real_escape_string($s);
+        return self::getInstance()->getConnection()->real_escape_string($s);
     }
 
-    protected function query($q)
+    protected function query(string $q): \mysqli_result|bool
     {
-        $con = self::getInstance()->getConnection();
-
-        return $con->query($q);
+        return self::getInstance()->getConnection()->query($q);
     }
 
     /**
@@ -99,30 +91,28 @@ class connectDb
         return $result !== false ? $result : true;
     }
 
-    protected function multi_query($q)
+    protected function multi_query(string $q): bool
     {
-        $con = self::getInstance()->getConnection();
-
-        return $con->multi_query($q);
+        return self::getInstance()->getConnection()->multi_query($q);
     }
 
-    protected function flush_multi_queries()
+    protected function flush_multi_queries(): bool
     {
         $con = self::getInstance()->getConnection();
 
         return $con->next_result() && $con->more_results();
     }
 
-    private static function getInstance()
+    private static function getInstance(): static
     {
-        if (!self::$_instance) { // If no instance then make one
+        if (self::$_instance === null) {
             self::$_instance = new self();
         }
 
         return self::$_instance;
     }
 
-    private function connect()
+    private function connect(): void
     {
         $this->db = new mysqli($this->_ip, $this->_user, $this->_pass, $this->_schema);
 
@@ -139,7 +129,7 @@ class connectDb
         $this->query("SET @@SESSION.SQL_MODE = REPLACE(@@SQL_MODE, 'ONLY_FULL_GROUP_BY,', '')");
     }
 
-    private function disconnect()
+    private function disconnect(): void
     {
         $this->db->close();
     }
