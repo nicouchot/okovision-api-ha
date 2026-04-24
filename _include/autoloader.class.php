@@ -10,9 +10,10 @@ class autoloader
     /**
      * Enregistre notre autoloader.
      */
-    public static function register()
+    public static function register(): void
     {
         spl_autoload_register([__CLASS__, 'autoload']);
+        require_once __DIR__ . '/helpers.php';
     }
 
     /**

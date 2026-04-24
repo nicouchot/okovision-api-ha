@@ -38,7 +38,7 @@ class administration extends connectDb
         $ip = $tmp[0];
         $port = isset($tmp[1]) ? $tmp[1] : 80;
 
-        if ($fp = @fsockopen($ip, $port, $errCode, $errStr, $waitTimeoutInSeconds)) {
+        if ($fp = fsockopen($ip, $port, $errCode, $errStr, $waitTimeoutInSeconds)) {
             // It worked
             $r['response'] = true;
             $r['url'] = 'http://'.$address.URL;
@@ -461,11 +461,10 @@ class administration extends connectDb
         $r = [];
 
         $dates = $this->getDateSaison($s['startDate']);
-        //insertion d'une reference au demarrage des cycles de chauffe
-        $query = "INSERT INTO oko_saisons (saison, date_debut, date_fin) VALUES('".$dates['saison']."','".$dates['start']."','".$dates['end']."');";
-        $this->log->debug('Class '.__CLASS__.' | '.__FUNCTION__.' | '.$query);
-
-        $r['response'] = $this->query($query);
+        $r['response'] = $this->prepare(
+            'INSERT INTO oko_saisons (saison, date_debut, date_fin) VALUES(?, ?, ?)',
+            [$dates['saison'], $dates['start'], $dates['end']]
+        );
 
         $this->sendResponse($r);
     }
@@ -482,12 +481,10 @@ class administration extends connectDb
         $r = [];
 
         $dates = $this->getDateSaison($s['startDate']);
-        //insertion d'une reference au demarrage des cycles de chauffe
-        $query = "UPDATE oko_saisons set saison='".$dates['saison']."', date_debut='".$dates['start']."', date_fin='".$dates['end']."' where id=".$s['idSaison'];
-
-        $this->log->debug('Class '.__CLASS__.' | '.__FUNCTION__.' | '.$query);
-
-        $r['response'] = $this->query($query);
+        $r['response'] = $this->prepare(
+            'UPDATE oko_saisons SET saison=?, date_debut=?, date_fin=? WHERE id=?',
+            [$dates['saison'], $dates['start'], $dates['end'], (int) $s['idSaison']]
+        );
 
         $this->sendResponse($r);
     }
@@ -502,9 +499,7 @@ class administration extends connectDb
     public function deleteSaison($s)
     {
         $r = [];
-        $query = 'DELETE FROM oko_saisons where id='.$s['idSaison'];
-
-        $r['response'] = $this->query($query);
+        $r['response'] = $this->prepare('DELETE FROM oko_saisons WHERE id=?', [(int) $s['idSaison']]);
         $this->sendResponse($r);
     }
 
@@ -552,18 +547,10 @@ class administration extends connectDb
     {
         $r = [];
 
-        $query = 'INSERT INTO oko_silo_events '
-                .'(event_date, quantity, remaining,  price,  event_type) '
-                .'VALUES '
-                ."('".$this->realEscapeString($s['event_date'])."',"
-                ." '".$this->realEscapeString($s['quantity'])."',"
-                ." '".$this->realEscapeString($s['remaining'])."',"
-                ." '".$this->realEscapeString($s['price'])."',"
-                ." '".$this->realEscapeString($s['event_type'])."')";
-
-        $this->log->debug('Class '.__CLASS__.' | '.__FUNCTION__.' | '.$query);
-
-        $r['response'] = $this->query($query);
+        $r['response'] = $this->prepare(
+            'INSERT INTO oko_silo_events (event_date, quantity, remaining, price, event_type) VALUES (?, ?, ?, ?, ?)',
+            [$s['event_date'], $s['quantity'], $s['remaining'], $s['price'], $s['event_type']]
+        );
 
         $this->sendResponse($r);
     }
@@ -577,17 +564,10 @@ class administration extends connectDb
     {
         $r = [];
 
-        $query = 'UPDATE oko_silo_events SET '
-                ." event_date='".$this->realEscapeString($s['event_date'])."', "
-                ." quantity='".$this->realEscapeString($s['quantity'])."', "
-                ." remaining='".$this->realEscapeString($s['remaining'])."', "
-                ." price='".$this->realEscapeString($s['price'])."', "
-                ." event_type='".$this->realEscapeString($s['event_type'])."' "
-                .' WHERE id='.$s['idEvent'];
-
-        $this->log->debug('Class '.__CLASS__.' | '.__FUNCTION__.' | '.$query);
-
-        $r['response'] = $this->query($query);
+        $r['response'] = $this->prepare(
+            'UPDATE oko_silo_events SET event_date=?, quantity=?, remaining=?, price=?, event_type=? WHERE id=?',
+            [$s['event_date'], $s['quantity'], $s['remaining'], $s['price'], $s['event_type'], (int) $s['idEvent']]
+        );
 
         $this->sendResponse($r);
     }
@@ -600,9 +580,7 @@ class administration extends connectDb
     public function deleteEvent($s)
     {
         $r = [];
-        $query = 'DELETE FROM oko_silo_events where id='.$s['idEvent'];
-
-        $r['response'] = $this->query($query);
+        $r['response'] = $this->prepare('DELETE FROM oko_silo_events WHERE id=?', [(int) $s['idEvent']]);
         $this->sendResponse($r);
     }
 
@@ -868,7 +846,7 @@ class administration extends connectDb
 
                 $query .= $addColumn;
 
-                $q = "INSERT INTO oko_capteur(name,position_column_csv,column_oko, original_name,type,boiler) VALUE ('{$name}',{$position},{$positionOko},'{$title}','{$type}','{$boiler}');";
+                $q = "INSERT INTO oko_capteur(name,position_column_csv,column_oko, original_name,type,boiler) VALUE ('".$this->realEscapeString($name)."',{$position},{$positionOko},'".$this->realEscapeString($title)."','".$this->realEscapeString($type)."','".$this->realEscapeString($boiler)."');";
 
                 ++$positionOko;
 
@@ -950,7 +928,7 @@ class administration extends connectDb
                     $this->log->debug('Class '.__CLASS__.' | '.__FUNCTION__.' | Create New oko_capteur | '.$addColumn);
                     $query .= $addColumn;
 
-                    $q = "INSERT INTO oko_capteur(name,position_column_csv,column_oko, original_name,type,boiler) VALUE ('{$name}',{$position},{$lastColumnOko},'{$title}','{$type}','{$boiler}');";
+                    $q = "INSERT INTO oko_capteur(name,position_column_csv,column_oko, original_name,type,boiler) VALUE ('".$this->realEscapeString($name)."',{$position},{$lastColumnOko},'".$this->realEscapeString($title)."','".$this->realEscapeString($type)."','".$this->realEscapeString($boiler)."');";
 
                     $this->log->debug('Class '.__CLASS__.' | '.__FUNCTION__.' | Create New oko_capteur | '.$q);
                 }

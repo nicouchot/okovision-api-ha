@@ -16,7 +16,7 @@
 
     <title>OkoVision</title>
     <script type="text/javascript">
-            var sessionToken = "<?php echo session::getInstance()->getVar('sid'); ?>";		
+            var sessionToken = "<?php echo e(session::getInstance()->getVar('sid')); ?>";		
    </script>
 	<!-- Bootstrap core CSS -->
     <link href="css/bootstrap.min.css" rel="stylesheet">

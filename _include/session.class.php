@@ -13,8 +13,7 @@ class session extends connectDb
         session_start();
 
         if (!$this->exist('sid')) {
-            $t = substr(md5(uniqid(session_id(), true)), 0, 8);
-            $this->setVar('sid', $t);
+            $this->setVar('sid', bin2hex(random_bytes(16)));
         }
 
         $cf = json_decode(file_get_contents('config.json'), true);
