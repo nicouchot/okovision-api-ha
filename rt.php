@@ -43,30 +43,14 @@ if (!file_exists('config.php')) {
                     
             		<div class="row">
             		    <div class="col-md-12" ><h2><small><?php echo session::getInstance()->getLabel('lang.text.page.rt.title.indic'); ?></small></h2></div>
-            		    <div class="col-lg-3 col-md-6">
-                            <div class="panel panel-primary">
-                                <div class="panel-heading">
-                                    
-                                    <div class="row">
-                                        
-                                        <div class="col-xs-2 text-left"><span class="glyphicon glyphicon-info-sign tip" title="<?php echo session::getInstance()->getLabel('lang.tooltip.CAPPL:FA[0].L_mittlere_laufzeit'); ?>" data-original-title="Tooltip"></span></div>
-                                    
-                                        <div class="col-xs-8 text-center">
-                                            <div class="huge" id="FA0_L_mittlere_laufzeit">--</div>
-                                        </div>
-                                        <div class="col-xs-2"></div>
-                                       
-                                    </div>
-                                    
-                                    
-                                </div>
-                                <div class="panel-footer">
-                                    <div class="labelbox"><?php echo session::getInstance()->getLabel('lang.capteur.CAPPL:FA[0].L_mittlere_laufzeit'); ?></div>
-                                    
-                                </div>
-                                
-                            </div>
-                        </div>
+<?php
+                        $id = 'FA0_L_mittlere_laufzeit';
+                        $key = 'CAPPL:FA[0].L_mittlere_laufzeit';
+                        $action = '';
+                        $savable = false;
+                        $default = '--';
+                        include __DIR__.'/_templates/rt/sensor_panel.php';
+                        ?>
                         <div class="col-lg-3 col-md-6">
                             <div class="panel panel-primary">
                                 <div class="panel-heading">

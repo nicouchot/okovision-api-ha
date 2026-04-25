@@ -35,24 +35,14 @@ if (!file_exists('config.php')) {
 					
             		    <div class="col-md-12" ><h2><small><?php echo session::getInstance()->getLabel('lang.text.page.rt.title.indic'); ?></small></h2></div>
             		    
-						<div class="col-lg-3 col-md-6">
-                            <div class="panel panel-primary">
-                                <div class="panel-heading">
-                                    <div class="row">
-                                        <div class="col-xs-2 text-left"><span class="glyphicon glyphicon-info-sign tip" title="<?php echo session::getInstance()->getLabel('lang.tooltip.CAPPL:FA[0].L_modulationsstufe'); ?>" data-original-title="Tooltip"></span></div>
-                                        <div class="col-xs-8 text-center">
-                                            <div class="huge 2save" id="pe1.L_modulation"></div>
-                                        </div>
-										<div class="col-xs-2 text-right">
-                                            <a href="javascript:void(0)" class="refresh_v4"><span class="glyphicon glyphicon-refresh" aria-hidden="true"></span></a>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="panel-footer">
-                                    <div class="labelbox"><?php echo session::getInstance()->getLabel('lang.capteur.CAPPL:FA[0].L_modulationsstufe'); ?></div>
-                                </div>
-                            </div>
-                        </div>
+<?php
+                        $id = 'pe1.L_modulation';
+                        $key = 'CAPPL:FA[0].L_modulationsstufe';
+                        $action = 'refresh_v4';
+                        $savable = true;
+                        $default = '';
+                        include __DIR__.'/_templates/rt/sensor_panel.php';
+                        ?>
                         <div class="col-lg-3 col-md-6">
                             <div class="panel panel-primary">
                                 <div class="panel-heading">
