@@ -1,5 +1,44 @@
 ## Unrealised
 
+## 2.3.0-beta.1 — 2026-04-25 — Phase 4 : migration des panels capteurs vers helper
+
+Migration de l'ensemble des panels capteurs Bootstrap des pages `rt.php` et `rt_v4.php` vers le helper `_templates/rt/sensor_panel.php`.
+
+- **rt.php** : 642 → 237 LOC (−63 %), 24 panels migrés (4 indicateurs + 6 tcambiante + 10 waterHT + 4 paramBruleur).
+- **rt_v4.php** : 350 → 143 LOC (−59 %), 14 panels migrés (5 indicateurs + 4 tcambiante + 5 ECS).
+- Pattern : tableau de configuration (`id`, `key`, `action`, `savable`, `default`) + `foreach` + `include` du helper.
+- Le rendu DOM reste fonctionnellement identique (validé par POC v2.3.0-alpha.3).
+
+- Fichiers modifiés : `rt.php`, `rt_v4.php`. Net : −611 lignes.
+
+## 2.3.0-alpha.3 — 2026-04-25 — Phase 4 : helper sensor_panel + POC
+
+Création du helper paramétrable factorisant le HTML des panels capteurs partagé entre `rt.php` et `rt_v4.php`.
+
+- **Nouveau** `_templates/rt/sensor_panel.php` : génère un panel Bootstrap (`col-lg-3 col-md-6` + `panel-primary`) à partir des variables `$id`, `$key`, `$action`, `$savable`, `$default`.
+- Actions supportées : `''` (read-only), `change`, `change_v4`, `change_list_v4` (icône crayon), `refresh_v4` (icône refresh).
+- POC : 1 panel migré dans chaque page (`FA0_L_mittlere_laufzeit` dans rt.php, `pe1.L_modulation` dans rt_v4.php) pour valider l'équivalence de rendu avant migration en masse.
+
+- Fichiers : `_templates/rt/sensor_panel.php` (nouveau), `rt.php`, `rt_v4.php`.
+
+## 2.3.0-alpha.2 — 2026-04-25 — Phase 4 : extraction modal_change partagée
+
+Factorisation de la modale d'édition d'une valeur de capteur, partagée entre `rt.php` et `rt_v4.php`.
+
+- **Nouveau** `_templates/rt/modal_change.php` : modale paramétrée par `$confirmId` (`btConfirmSensor` ou `btConfirmSensor_v4`).
+- Inclusion via `<?php $confirmId = '...'; include __DIR__.'/_templates/rt/modal_change.php'; ?>`.
+
+- Fichiers modifiés : `rt.php`, `rt_v4.php` (−6 LOC chacun).
+
+## 2.3.0-alpha.1 — 2026-04-25 — Phase 4 : extraction loading_block partagé
+
+Première étape de déduplication entre `rt.php` et `rt_v4.php` : extraction du bloc commun « spinner de chargement + bandeau alerte sauvegarde ».
+
+- **Nouveau** `_templates/rt/loading_block.php` : `#logginprogress` + `#mustSaving`.
+- Inclusion via `<?php include __DIR__.'/_templates/rt/loading_block.php'; ?>`.
+
+- Fichiers modifiés : `rt.php`, `rt_v4.php` (−6 LOC chacun).
+
 ## 2.2.2 — 2026-04-25 — Fix régressions PHP 8.4 (rt_v4.php + adminParam.php)
 
 Correction de deux régressions liées à la migration PHP 8.4 et à des bugs latents découverts pendant le refactoring.
