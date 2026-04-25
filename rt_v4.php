@@ -13,298 +13,91 @@ if (!file_exists('config.php')) {
     include_once '_templates/menu.php';
 }
 
-?>  
+?>
 
     <div class="container theme-showcase" role="main">
-           
-         
+
+
 		<div class="page-header">
 		    <div class="row">
 		        <div class="col-md-11 rtTitle"><?php echo session::getInstance()->getLabel('lang.text.page.rt.boilerName'); ?> <?php echo 'http://'.CHAUDIERE; ?></div>
-		    </div>          
+		    </div>
 		</div>
         <?php include __DIR__.'/_templates/rt/loading_block.php'; ?>
-				
+
         <div id="communication" style="display: none;">
-             
+
             <div class="tab-content">
-                 
-                 <div role="tabpanel" class="tab-pane active" id="indicateurs">  
-                    
+
+                 <div role="tabpanel" class="tab-pane active" id="indicateurs">
+
             		<div class="row">
-					
+
             		    <div class="col-md-12" ><h2><small><?php echo session::getInstance()->getLabel('lang.text.page.rt.title.indic'); ?></small></h2></div>
-            		    
+
 <?php
-                        $id = 'pe1.L_modulation';
-                        $key = 'CAPPL:FA[0].L_modulationsstufe';
-                        $action = 'refresh_v4';
-                        $savable = true;
-                        $default = '';
-                        include __DIR__.'/_templates/rt/sensor_panel.php';
+                        $panels = [
+                            ['id' => 'pe1.L_modulation',   'key' => 'CAPPL:FA[0].L_modulationsstufe',     'action' => 'refresh_v4', 'savable' => true,  'default' => ''],
+                            ['id' => 'pe1.L_state',        'key' => 'CAPPL:FA[0].L_kesselstatus',         'action' => 'refresh_v4', 'savable' => true,  'default' => ''],
+                        ];
+                        foreach ($panels as $p) {
+                            extract($p);
+                            include __DIR__.'/_templates/rt/sensor_panel.php';
+                        }
                         ?>
-                        <div class="col-lg-3 col-md-6">
-                            <div class="panel panel-primary">
-                                <div class="panel-heading">
-                                    <div class="row">
-                                        <div class="col-xs-2 text-left"><span class="glyphicon glyphicon-info-sign tip" title="<?php echo session::getInstance()->getLabel('lang.tooltip.CAPPL:FA[0].L_kesselstatus'); ?>" data-original-title="Tooltip"></span></div>
-                                        <div class="col-xs-8 text-center">
-                                            <div class="huge 2save" id="pe1.L_state"></div>
-                                        </div>
-										<div class="col-xs-2 text-right">
-                                            <a href="javascript:void(0)" class="refresh_v4"><span class="glyphicon glyphicon-refresh" aria-hidden="true"></span></a>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="panel-footer">
-                                    <div class="labelbox"><?php echo session::getInstance()->getLabel('lang.capteur.CAPPL:FA[0].L_kesselstatus'); ?></div>
-                                </div>
-                            </div>
-                        </div>
-						
+
 						<div class="col-md-12" ><h2></h2></div>
-            		    
-						<div class="col-lg-3 col-md-6">
-                            <div class="panel panel-primary">
-                                <div class="panel-heading">
-                                    
-                                    <div class="row">
-                                        
-                                        <div class="col-xs-2 text-left"><span class="glyphicon glyphicon-info-sign tip" title="<?php echo session::getInstance()->getLabel('lang.tooltip.CAPPL:FA[0].L_mittlere_laufzeit'); ?>" data-original-title="Tooltip"></span></div>
-                                    
-                                        <div class="col-xs-8 text-center">
-                                            <div class="huge" id="pe1.L_avg_runtime"></div>											
-                                        </div>
-                                        <div class="col-xs-2"></div>
-                                       
-                                    </div>
-                                    
-                                    
-                                </div>
-                                <div class="panel-footer">
-                                    <div class="labelbox">
-										<?php 
-											echo session::getInstance()->getLabel('lang.capteur.CAPPL:FA[0].L_mittlere_laufzeit'); 
-										?>
-									</div>
-                                    
-                                </div>
-                                
-                            </div>
-                        </div>
-                        <div class="col-lg-3 col-md-6">
-                            <div class="panel panel-primary">
-                                <div class="panel-heading">
-                                    <div class="row">
-                                        <div class="col-xs-2 text-left"><span class="glyphicon glyphicon-info-sign tip" title="<?php echo session::getInstance()->getLabel('lang.tooltip.CAPPL:FA[0].L_brennerstarts'); ?>" data-original-title="Tooltip" ></span></div>
-                                        <div class="col-xs-8 text-center">
-                                            <div class="huge" id="pe1.L_starts"></div>
-                                        </div>
-                                         <div class="col-xs-2"></div>
-                                    </div>
-                                </div>
-                                <div class="panel-footer">
-                                    <div class="labelbox"><?php echo session::getInstance()->getLabel('lang.capteur.CAPPL:FA[0].L_brennerstarts'); ?></div>
-                                </div>
-                                
-                            </div>
-                        </div>
-                        <div class="col-lg-3 col-md-6">
-                            <div class="panel panel-primary">
-                                <div class="panel-heading">
-                                    <div class="row">
-                                        <div class="col-xs-2 text-left"><span class="glyphicon glyphicon-info-sign tip" title="<?php echo session::getInstance()->getLabel('lang.tooltip.CAPPL:FA[0].L_brennerlaufzeit_anzeige'); ?>" data-original-title="Tooltip"></span></div>
-                                    
-                                        <div class="col-xs-8 text-center">
-                                            <div class="huge" id="pe1.L_runtime"></div>
-                                        </div>
-                                         <div class="col-xs-2"></div>
-                                    </div>
-                                </div>
-                                <div class="panel-footer">
-                                    <div class="labelbox"><?php echo session::getInstance()->getLabel('lang.capteur.CAPPL:FA[0].L_brennerlaufzeit_anzeige'); ?></div>
-                                </div>
-                                
-                            </div>
-                        </div>
-                        
+
+<?php
+                        $panels = [
+                            ['id' => 'pe1.L_avg_runtime', 'key' => 'CAPPL:FA[0].L_mittlere_laufzeit',         'action' => '', 'savable' => false, 'default' => ''],
+                            ['id' => 'pe1.L_starts',      'key' => 'CAPPL:FA[0].L_brennerstarts',             'action' => '', 'savable' => false, 'default' => ''],
+                            ['id' => 'pe1.L_runtime',     'key' => 'CAPPL:FA[0].L_brennerlaufzeit_anzeige',   'action' => '', 'savable' => false, 'default' => ''],
+                        ];
+                        foreach ($panels as $p) {
+                            extract($p);
+                            include __DIR__.'/_templates/rt/sensor_panel.php';
+                        }
+                        ?>
+
                         <div class="col-md-12" ><h2><small><?php echo session::getInstance()->getLabel('lang.text.page.rt.title.tcambiante'); ?></small></h2></div>
-                        
-						<div class="col-lg-3 col-md-6">
-                            <div class="panel panel-primary">
-                                <div class="panel-heading">
-                                    <div class="row">
-                                        <div class="col-xs-2 text-left"><span class="glyphicon glyphicon-info-sign tip" title="<?php echo session::getInstance()->getLabel('lang.tooltip.CAPPL:LOCAL.hk[0].raumtemp_heizen'); ?>" data-original-title="Tooltip"></span></div>
-                                        <div class="col-xs-8 text-center">
-                                            <div class="huge 2save" id="hk1.temp_heat"></div>
-                                        </div>
-                                        <div class="col-xs-2 text-right">
-                                            <a href="javascript:void(0)" class="change_v4"><span class="glyphicon glyphicon-pencil" aria-hidden="true"></span></a>
-                                        </div>
-                                    </div>
-                                </div> 
-                                <div class="panel-footer">
-                                    <div class="labelbox"><?php echo session::getInstance()->getLabel('lang.capteur.CAPPL:LOCAL.hk[0].raumtemp_heizen'); ?></div>
-                                    
-                                </div>
-                                
-                            </div>
-                        </div>
-                        <div class="col-lg-3 col-md-6">
-                            <div class="panel panel-primary">
-                                <div class="panel-heading">
-                                    <div class="row">
-                                        <div class="col-xs-2 text-left"><span class="glyphicon glyphicon-info-sign tip" title="<?php echo session::getInstance()->getLabel('lang.tooltip.CAPPL:LOCAL.hk[0].raumtemp_absenken'); ?>" data-original-title="Tooltip"></span></div>
-                                        <div class="col-xs-8 text-center">
-                                            <div class="huge 2save" id="hk1.temp_setback"></div>
-                                        </div>
-                                        <div class="col-xs-2 text-right">
-                                            <a href="javascript:void(0)" class="change_v4"><span class="glyphicon glyphicon-pencil" aria-hidden="true"></span></a>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="panel-footer">
-                                    <div class="labelbox"><?php echo session::getInstance()->getLabel('lang.capteur.CAPPL:LOCAL.hk[0].raumtemp_absenken'); ?></div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-lg-3 col-md-6">
-                            <div class="panel panel-primary">
-                                <div class="panel-heading">
-                                    <div class="row">
-                                        <div class="col-xs-2 text-left"><span class="glyphicon glyphicon-info-sign tip" title="<?php echo session::getInstance()->getLabel('lang.tooltip.CAPPL:LOCAL.hk[0].betriebsart[1]'); ?>" data-original-title="Tooltip"></span></div>
-                                        <div class="col-xs-8 text-center">
-                                            <div class="huge 2save" id="hk1.mode_auto"></div>
-                                        </div>
-										<div class="col-xs-2 text-right">
-                                            <a href="javascript:void(0)" class="change_list_v4"><span class="glyphicon glyphicon-pencil" aria-hidden="true"></span></a>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="panel-footer">
-                                    <div class="labelbox"><?php echo session::getInstance()->getLabel('lang.capteur.CAPPL:LOCAL.hk[0].betriebsart[1]'); ?></div> 
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-lg-3 col-md-6">
-                            <div class="panel panel-primary">
-                                <div class="panel-heading">
-                                    <div class="row">
-                                        <div class="col-xs-2 text-left"><span class="glyphicon glyphicon-info-sign tip" title="<?php echo session::getInstance()->getLabel('lang.tooltip.CAPPL:LOCAL.L_hk[0].status'); ?>" data-original-title="Tooltip"></span></div>
-                                        <div class="col-xs-8 text-center">
-                                            <div class="huge 2save" id="hk1.L_state"></div>
-                                        </div>
-										<div class="col-xs-2 text-right">
-                                            <a href="javascript:void(0)" class="refresh_v4"><span class="glyphicon glyphicon-refresh" aria-hidden="true"></span></a>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="panel-footer">
-                                    <div class="labelbox"><?php echo session::getInstance()->getLabel('lang.capteur.CAPPL:LOCAL.L_hk[0].status'); ?></div>
-                                </div>
-                            </div>
-                        </div>
-                        
+
+<?php
+                        $panels = [
+                            ['id' => 'hk1.temp_heat',    'key' => 'CAPPL:LOCAL.hk[0].raumtemp_heizen',   'action' => 'change_v4',      'savable' => true, 'default' => ''],
+                            ['id' => 'hk1.temp_setback', 'key' => 'CAPPL:LOCAL.hk[0].raumtemp_absenken', 'action' => 'change_v4',      'savable' => true, 'default' => ''],
+                            ['id' => 'hk1.mode_auto',    'key' => 'CAPPL:LOCAL.hk[0].betriebsart[1]',    'action' => 'change_list_v4', 'savable' => true, 'default' => ''],
+                            ['id' => 'hk1.L_state',      'key' => 'CAPPL:LOCAL.L_hk[0].status',          'action' => 'refresh_v4',     'savable' => true, 'default' => ''],
+                        ];
+                        foreach ($panels as $p) {
+                            extract($p);
+                            include __DIR__.'/_templates/rt/sensor_panel.php';
+                        }
+                        ?>
+
 						<div class="col-md-12" ><h2><small><?php echo session::getInstance()->getLabel('lang.text.page.rt.title.ECS'); ?></small></h2></div>
-                        
-						<div class="col-lg-3 col-md-6">
-                            <div class="panel panel-primary">
-                                <div class="panel-heading">
-                                    <div class="row">
-                                        <div class="col-xs-2 text-left"><span class="glyphicon glyphicon-info-sign tip" title="<?php echo session::getInstance()->getLabel('lang.tooltip.CAPPL:LOCAL.L_ww[0].switch-on_sensor_actual'); ?>" data-original-title="Tooltip"></span></div>
-                                        <div class="col-xs-8 text-center">
-                                            <div class="huge 2save" id="ww1.L_ontemp_act"></div>
-                                        </div>
-                                        <div class="col-xs-2 text-right">
-                                            <a href="javascript:void(0)" class="refresh_v4"><span class="glyphicon glyphicon-refresh" aria-hidden="true"></span></a>
-                                        </div>
-                                    </div>
-                                </div> 
-                                <div class="panel-footer">
-                                    <div class="labelbox"><?php echo session::getInstance()->getLabel('lang.capteur.CAPPL:LOCAL.L_ww[0].switch-on_sensor_actual'); ?></div>
-                                </div>
-                            </div>
-                        </div>
-						<div class="col-lg-3 col-md-6">
-                            <div class="panel panel-primary">
-                                <div class="panel-heading">
-                                    <div class="row">
-                                        <div class="col-xs-2 text-left"><span class="glyphicon glyphicon-info-sign tip" title="<?php echo session::getInstance()->getLabel('lang.tooltip.CAPPL:LOCAL.ww[0].temp_heizen'); ?>" data-original-title="Tooltip"></span></div>
-                                        <div class="col-xs-8 text-center">
-                                            <div class="huge 2save" id="ww1.temp_max_set"></div>
-                                        </div>
-                                        <div class="col-xs-2 text-right">
-                                            <a href="javascript:void(0)" class="change_v4"><span class="glyphicon glyphicon-pencil" aria-hidden="true"></span></a>
-                                        </div>
-                                    </div>
-                                </div> 
-                                <div class="panel-footer">
-                                    <div class="labelbox"><?php echo session::getInstance()->getLabel('lang.capteur.CAPPL:LOCAL.ww[0].temp_heizen'); ?></div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-lg-3 col-md-6">
-                            <div class="panel panel-primary">
-                                <div class="panel-heading">
-                                    <div class="row">
-                                        <div class="col-xs-2 text-left"><span class="glyphicon glyphicon-info-sign tip" title="<?php echo session::getInstance()->getLabel('lang.tooltip.CAPPL:LOCAL.ww[0].temp_absenken'); ?>" data-original-title="Tooltip"></span></div>
-                                        <div class="col-xs-8 text-center">
-                                            <div class="huge 2save" id="ww1.temp_min_set"></div>
-                                        </div>
-                                        <div class="col-xs-2 text-right">
-                                            <a href="javascript:void(0)" class="change_v4"><span class="glyphicon glyphicon-pencil" aria-hidden="true"></span></a>
-                                        </div>
-                                    </div>
-                                </div> 
-                                <div class="panel-footer">
-                                    <div class="labelbox"><?php echo session::getInstance()->getLabel('lang.capteur.CAPPL:LOCAL.ww[0].temp_absenken'); ?></div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-lg-3 col-md-6">
-                            <div class="panel panel-primary">
-                                <div class="panel-heading">
-                                    <div class="row">
-                                        <div class="col-xs-2 text-left"><span class="glyphicon glyphicon-info-sign tip" title="<?php echo session::getInstance()->getLabel('lang.tooltip.CAPPL:LOCAL.ww[0].betriebsart[1]'); ?>" data-original-title="Tooltip"></span></div>
-                                        <div class="col-xs-8 text-center">
-                                            <div class="huge 2save" id="ww1.mode_auto"></div>
-                                        </div>
-                                        <div class="col-xs-2 text-right">
-                                            <a href="javascript:void(0)" class="change_list_v4"><span class="glyphicon glyphicon-pencil" aria-hidden="true"></span></a>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="panel-footer">
-                                    <div class="labelbox"><?php echo session::getInstance()->getLabel('lang.capteur.CAPPL:LOCAL.ww[0].betriebsart[1]'); ?></div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-lg-3 col-md-6">
-                            <div class="panel panel-primary">
-                                <div class="panel-heading">
-                                    <div class="row">
-                                        <div class="col-xs-2 text-left"><span class="glyphicon glyphicon-info-sign tip" title="<?php echo session::getInstance()->getLabel('lang.tooltip.CAPPL:LOCAL.ww[0].einmal_aufbereiten'); ?>" data-original-title="Tooltip"></span></div>
-                                        <div class="col-xs-8 text-center">
-                                            <div class="huge 2save" id="ww1.heat_once"></div>
-                                        </div>
-                                        <div class="col-xs-2 text-right">
-                                            <a href="javascript:void(0)" class="change_list_v4"><span class="glyphicon glyphicon-pencil" aria-hidden="true"></span></a>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="panel-footer">
-                                    <div class="labelbox"><?php echo session::getInstance()->getLabel('lang.capteur.CAPPL:LOCAL.ww[0].einmal_aufbereiten'); ?></div>
-                                </div>
-                            </div>
-                        </div>
-						
+
+<?php
+                        $panels = [
+                            ['id' => 'ww1.L_ontemp_act',  'key' => 'CAPPL:LOCAL.L_ww[0].switch-on_sensor_actual', 'action' => 'refresh_v4',     'savable' => true, 'default' => ''],
+                            ['id' => 'ww1.temp_max_set',  'key' => 'CAPPL:LOCAL.ww[0].temp_heizen',               'action' => 'change_v4',      'savable' => true, 'default' => ''],
+                            ['id' => 'ww1.temp_min_set',  'key' => 'CAPPL:LOCAL.ww[0].temp_absenken',             'action' => 'change_v4',      'savable' => true, 'default' => ''],
+                            ['id' => 'ww1.mode_auto',     'key' => 'CAPPL:LOCAL.ww[0].betriebsart[1]',            'action' => 'change_list_v4', 'savable' => true, 'default' => ''],
+                            ['id' => 'ww1.heat_once',     'key' => 'CAPPL:LOCAL.ww[0].einmal_aufbereiten',        'action' => 'change_list_v4', 'savable' => true, 'default' => ''],
+                        ];
+                        foreach ($panels as $p) {
+                            extract($p);
+                            include __DIR__.'/_templates/rt/sensor_panel.php';
+                        }
+                        ?>
+
                     </div>
                 </div>
             </div>
-        </div>      
-        
+        </div>
+
         <?php $confirmId = 'btConfirmSensor_v4'; include __DIR__.'/_templates/rt/modal_change.php'; ?>
-		
+
 		<div class="modal fade" id="modal_change_list" tabindex="-1" role="dialog" aria-labelledby="changeValue" aria-hidden="true">
             <div class="modal-dialog modal-sm">
                 <div class="modal-content">
@@ -323,7 +116,7 @@ if (!file_exists('config.php')) {
                         <br/>
                         <form>
 							<select id="listChoise" class="form-control text-center input-lg col-xs-10">
-							</select>	
+							</select>
                         </form>
                         <br/> <br/>
                     </div>
