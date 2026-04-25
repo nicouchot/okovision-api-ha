@@ -28,12 +28,7 @@ if (!file_exists('config.php')) {
 		        </div>
 		    </div>          
 		</div>
-		<div id="logginprogress" class="page-header" align="center">
-            <p><span class="glyphicon glyphicon-refresh glyphicon-spin"></span>&nbsp;<?php echo session::getInstance()->getLabel('lang.text.page.rt.logginprogress'); ?></p>
-        </div> 
-        <div id="mustSaving" class="alert alert-warning" style="display: none;" role="alert">
-              <span class="glyphicon glyphicon-floppy-save"></span>&nbsp;<?php echo session::getInstance()->getLabel('lang.text.page.rt.alertWarning'); ?>
-        </div>
+        <?php include __DIR__.'/_templates/rt/loading_block.php'; ?>
         <div id="communication" style="display: none;">
         
             <ul class="nav nav-tabs red" role="tablist">
