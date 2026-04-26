@@ -103,7 +103,7 @@ class connectDb
         return $con->next_result() && $con->more_results();
     }
 
-    private static function getInstance(): static
+    private static function getInstance(): self
     {
         if (self::$_instance === null) {
             self::$_instance = new self();
