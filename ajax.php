@@ -10,6 +10,10 @@
 */
 
 include_once 'config.php';
+set_exception_handler(function(\Throwable $e): void {
+    header('Content-type: text/json; charset=utf-8');
+    echo json_encode(['response' => false, 'debug' => $e->getMessage().' in '.$e->getFile().':'.$e->getLine()]);
+});
 
 
 function is_ajax(): bool

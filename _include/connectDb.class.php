@@ -129,6 +129,12 @@ class connectDb
         $this->query("SET @@SESSION.SQL_MODE = REPLACE(@@SQL_MODE, 'ONLY_FULL_GROUP_BY,', '')");
     }
 
+    protected function sendResponse(mixed $data): void
+    {
+        header('Content-type: text/json; charset=utf-8');
+        echo json_encode($data, JSON_NUMERIC_CHECK);
+    }
+
     private function disconnect(): void
     {
         $this->db->close();

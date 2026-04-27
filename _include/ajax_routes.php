@@ -75,13 +75,13 @@ return [
             (new administration())->getDayWithoutSynthese();
         },
         'checkUpdate' => static function (): void {
-            (new administration())->checkUpdate();
+            (new AdminUpdate())->checkUpdate();
         },
         'makeUpdate' => static function (): void {
-            (new administration())->makeUpdate();
+            (new AdminUpdate())->makeUpdate();
         },
         'getVersion' => static function (): void {
-            (new administration())->getVersion();
+            (new AdminUpdate())->getVersion();
         },
         'getFileFromTmp' => static function (): void {
             (new administration())->getFileFromTmp();
@@ -92,13 +92,13 @@ return [
             }
         },
         'login' => static function (): void {
-            (new administration())->login($_POST['user'], $_POST['pass']);
+            (new AdminAuth())->login($_POST['user'], $_POST['pass']);
         },
         'logout' => static function (): void {
-            (new administration())->logout();
+            (new AdminAuth())->logout();
         },
         'changePassword' => static function (): void {
-            (new administration())->changePassword($_POST['pass']);
+            (new AdminAuth())->changePassword($_POST['pass']);
         },
     ],
 
