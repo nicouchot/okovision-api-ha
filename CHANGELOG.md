@@ -1,5 +1,36 @@
 ## Unrealised
 
+## 2.4.0-alpha.3 — 2026-04-27 — Phase 5 — sous-commit 5.3 : éclatement d'administration.class.php
+
+Suppression du dernier monolithe admin : `administration.class.php` (823 LOC) découpé en 5 classes cohésives, toutes `declare(strict_types=1)`, toutes < 200 LOC.
+
+- **Nouveau** `_include/AdminParam.class.php` : `ping()`, `saveInfoGenerale()`.
+- **Nouveau** `_include/AdminImport.class.php` : `getFileFromChaudiere()`, `importFileFromChaudiere()`, `getFileFromTmp()`, `importFileFromTmp()`, `importcsv()`.
+- **Nouveau** `_include/AdminMatrix.class.php` : `uploadCsv()`, `getHeaderFromOkoCsv()`, `statusMatrice()`, `deleteMatrice()`, `getDayWithoutSynthese()`, `makeSyntheseByDay()`, `initMatriceFromFile()` (privée), `updateMatriceFromFile()` (privée).
+- **Nouveau** `_include/AdminSeason.class.php` : `getSaisons()`, `existSaison()`, `setSaison()`, `deleteSaison()`, `updateSaison()`, `getDateSaison()` (privée).
+- **Nouveau** `_include/AdminEvent.class.php` : `getEvents()`, `setEvent()`, `updateEvent()`, `deleteEvent()`.
+- **Supprimé** `_include/administration.class.php`.
+- `_include/ajax_routes.php` : toutes les routes `admin.*` pointent vers les nouvelles classes spécialisées.
+- `api.php` : `new administration()` remplacé par instanciations directes des classes métier.
+- `simu_upgrade.php` : `administration::getCurrentVersion()` → `AdminUpdate::getCurrentVersion()`.
+
+## 2.4.0-alpha.2 — 2026-04-27 — Phase 5 — sous-commit 5.2 : extraction AdminAuth + AdminUpdate
+
+Extraction des responsabilités authentification et mise à jour hors d'`administration.class.php`.
+
+- **Nouveau** `_include/AdminAuth.class.php` : `login()`, `logout()`, `changePassword()`. Correction du hashage : `sha1($pass)` sans `realEscapeString` (le hash SHA1 étant déjà de l'hex, l'échappement avant hachage était incorrect et produisait des hashes incohérents).
+- **Nouveau** `_include/AdminUpdate.class.php` : `getVersion()`, `getCurrentVersion()` (static), `checkUpdate()`, `addOkoStat()`, `makeUpdate()`. Correction d'un bug pré-existant : assignation `=` au lieu de comparaison `===` sur `AutoUpdate::ERROR_SIMULATE`.
+- `_include/connectDb.class.php` : ajout de `sendResponse(mixed $data): void` protégée, mutualisée par toutes les sous-classes Admin.
+- `_include/ajax_routes.php` : routes `admin.login/logout/changePassword` → `AdminAuth` ; `admin.checkUpdate/makeUpdate/getVersion` → `AdminUpdate`.
+
+## 2.4.0-alpha.1 — 2026-04-27 — Phase 5 — sous-commit 5.1 : routeur ajax + fix régression connectDb
+
+Refonte du dispatcher ajax et correction d'une régression introduite en Phase 3.
+
+- **`ajax.php`** : 340 → 51 LOC. Le `switch` imbriqué est remplacé par un dispatch via table de closures. `set_exception_handler` ajouté pour retourner du JSON en cas d'exception non capturée.
+- **Nouveau** `_include/ajax_routes.php` : 63 routes organisées par type (`admin`, `graphique`, `rendu`, `rt`), chacune encapsulée dans une `static function(): void`.
+- **Fix régression Phase 3** `connectDb::getInstance()` : `static` → `self` comme type de retour. La LSB (`static`) forçait PHP à s'attendre à une instance de la sous-classe appelante, alors que `new self()` retourne toujours un `connectDb`. Ce bug cassait silencieusement toutes les requêtes SQL des sous-classes depuis la Phase 3.
+
 ## 2.3.0-beta.1 — 2026-04-25 — Phase 4 : migration des panels capteurs vers helper
 
 Migration de l'ensemble des panels capteurs Bootstrap des pages `rt.php` et `rt_v4.php` vers le helper `_templates/rt/sensor_panel.php`.
