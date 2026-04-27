@@ -12,67 +12,67 @@ return [
     'admin' => [
         'testIp' => static function (): void {
             if (isset($_GET['ip'])) {
-                (new administration())->ping($_GET['ip']);
+                (new AdminParam())->ping($_GET['ip']);
             }
         },
         'saveInfoGe' => static function (): void {
-            (new administration())->saveInfoGenerale($_POST);
+            (new AdminParam())->saveInfoGenerale($_POST);
         },
         'getFileFromChaudiere' => static function (): void {
-            (new administration())->getFileFromChaudiere();
+            (new AdminImport())->getFileFromChaudiere();
         },
         'importFileFromChaudiere' => static function (): void {
-            (new administration())->importFileFromChaudiere($_POST);
+            (new AdminImport())->importFileFromChaudiere($_POST);
         },
         'uploadCsv' => static function (): void {
-            (new administration())->uploadCsv($_POST, $_FILES);
+            (new AdminMatrix())->uploadCsv($_POST, $_FILES);
         },
         'getHeaderFromOkoCsv' => static function (): void {
-            (new administration())->getHeaderFromOkoCsv();
+            (new AdminMatrix())->getHeaderFromOkoCsv();
         },
         'statusMatrice' => static function (): void {
-            (new administration())->statusMatrice();
+            (new AdminMatrix())->statusMatrice();
         },
         'deleteMatrice' => static function (): void {
-            (new administration())->deleteMatrice();
+            (new AdminMatrix())->deleteMatrice();
         },
         'importcsv' => static function (): void {
-            (new administration())->importcsv();
+            (new AdminImport())->importcsv();
         },
         'getSaisons' => static function (): void {
-            (new administration())->getSaisons();
+            (new AdminSeason())->getSaisons();
         },
         'existSaison' => static function (): void {
             if (isset($_GET['date'])) {
-                (new administration())->existSaison($_GET['date']);
+                (new AdminSeason())->existSaison($_GET['date']);
             }
         },
         'setSaison' => static function (): void {
-            (new administration())->setSaison($_POST);
+            (new AdminSeason())->setSaison($_POST);
         },
         'deleteSaison' => static function (): void {
-            (new administration())->deleteSaison($_POST);
+            (new AdminSeason())->deleteSaison($_POST);
         },
         'updateSaison' => static function (): void {
-            (new administration())->updateSaison($_POST);
+            (new AdminSeason())->updateSaison($_POST);
         },
         'getEvents' => static function (): void {
-            (new administration())->getEvents();
+            (new AdminEvent())->getEvents();
         },
         'setEvent' => static function (): void {
-            (new administration())->setEvent($_POST);
+            (new AdminEvent())->setEvent($_POST);
         },
         'deleteEvent' => static function (): void {
-            (new administration())->deleteEvent($_POST);
+            (new AdminEvent())->deleteEvent($_POST);
         },
         'updateEvent' => static function (): void {
-            (new administration())->updateEvent($_POST);
+            (new AdminEvent())->updateEvent($_POST);
         },
         'makeSyntheseByDay' => static function (): void {
-            (new administration())->makeSyntheseByDay($_GET['date']);
+            (new AdminMatrix())->makeSyntheseByDay($_GET['date']);
         },
         'getDayWithoutSynthese' => static function (): void {
-            (new administration())->getDayWithoutSynthese();
+            (new AdminMatrix())->getDayWithoutSynthese();
         },
         'checkUpdate' => static function (): void {
             (new AdminUpdate())->checkUpdate();
@@ -84,11 +84,11 @@ return [
             (new AdminUpdate())->getVersion();
         },
         'getFileFromTmp' => static function (): void {
-            (new administration())->getFileFromTmp();
+            (new AdminImport())->getFileFromTmp();
         },
         'importFileFromTmp' => static function (): void {
             if (isset($_GET['file'])) {
-                (new administration())->importFileFromTmp($_GET['file']);
+                (new AdminImport())->importFileFromTmp($_GET['file']);
             }
         },
         'login' => static function (): void {

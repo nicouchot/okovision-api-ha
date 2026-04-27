@@ -38,27 +38,25 @@ if (is_ajax() && is_valid()) {
         */
         switch ($_GET['type']) {
                 case 'admin':
-                    $a = new administration();
-
                     switch ($_GET['action']) {
                         case 'getFileFromChaudiere':
-                            $a->getFileFromChaudiere();
+                            (new AdminImport())->getFileFromChaudiere();
 
                             break;
                         case 'getHeaderFromOkoCsv':
-                            $a->getHeaderFromOkoCsv();
+                            (new AdminMatrix())->getHeaderFromOkoCsv();
 
                             break;
                         case 'getSaisons':
-                            $a->getSaisons();
+                            (new AdminSeason())->getSaisons();
 
                             break;
                         case 'checkUpdate':
-                            $a->checkUpdate();
+                            (new AdminUpdate())->checkUpdate();
 
                             break;
                         case 'getVersion':
-                            $a->getVersion();
+                            (new AdminUpdate())->getVersion();
 
                             break;
                     }
