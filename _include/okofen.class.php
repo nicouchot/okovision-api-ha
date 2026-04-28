@@ -205,22 +205,24 @@ class okofen extends connectDb
 
     private function download(string $file_source, string $file_target): bool
     {
-        $rh = fopen($file_source, 'rb');
-        $wh = fopen($file_target, 'w+b');
-        if (!$rh || !$wh) {
+        $wh = @fopen($file_target, 'w+b');
+        if ($wh === false) {
             return false;
         }
 
-        while (!feof($rh)) {
-            if (false === fwrite($wh, fread($rh, 4096))) {
-                return false;
-            }
-        }
+        $ch = curl_init($file_source);
+        curl_setopt_array($ch, [
+            CURLOPT_FILE           => $wh,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_TIMEOUT        => 30,
+            CURLOPT_FAILONERROR    => true,
+        ]);
 
-        fclose($rh);
+        $ok = curl_exec($ch);
+        curl_close($ch);
         fclose($wh);
 
-        return true;
+        return $ok !== false;
     }
 
     private function cvtDec(string $n): string
