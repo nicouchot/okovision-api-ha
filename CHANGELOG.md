@@ -1,5 +1,26 @@
 ## Unrealised
 
+## 2.4.0-rc.5 — 2026-04-30 — Refonte libellés menu « Actions Manuelles »
+
+Réorganisation et clarification du sous-menu « Actions Manuelles » : la page upload USB est en réalité un upload de fichier CSV (peu importe sa provenance), elle remonte donc en 2e position juste après l'import direct chaudière. Les libellés sont harmonisés pour rendre lisible le périmètre de chaque page (source des données + lieu de stockage intermédiaire).
+
+- **`_templates/menu.php`** : `amImpUsb.php` remonte en 2e position (avant `amImpMail.php`).
+- **`_langs/fr.text.json`** :
+  - `menu.manual.import.usb` : "Mise à jour des données (import usb)" → "Mise à jour des données (upload fichier)"
+  - `menu.manual.import.mail` : "Mise à jour des données (import mail)" → "Chargement des fichiers en masse (via mail)"
+  - `menu.manual.import.mass` : "Import en masse" → "Mise à jour en masse (dossier _tmp)"
+  - `page.import.title` : "Importation en masse" → "Mise à jour en masse (dossier _tmp)" (titre `<h2>` de `amImportMass.php` aligné sur le menu)
+- **`_langs/en.text.json`** : mêmes modifications côté EN (`Data update (file upload)`, `Bulk file download (via mail)`, `Bulk update (_tmp folder)`).
+
+Cohérence titres `<h2>` : les pages `amImpBoiler.php`, `amImpUsb.php`, `amImpMail.php`, `amSynthese.php` réutilisent déjà directement la clé de menu pour leur titre — la mise à jour des libellés suffit. Seul `amImportMass.php` utilise une clé dédiée (`page.import.title`), réalignée explicitement.
+
+Ordre final du sous-menu :
+1. Mise à jour des données (depuis chaudière)
+2. Mise à jour des données (upload fichier)
+3. Chargement des fichiers en masse (via mail)
+4. Mise à jour en masse (dossier _tmp)
+5. Calcul des synthèses journalières
+
 ## 2.4.0-rc.4 — 2026-04-30 — Fix mktime() résiduels cron.php + setup.php (PHP 8.4)
 
 Suite logique de rc.3 : nettoyage des deux dernières occurrences du pattern `mktime(0, 0, 0, date('m'), date('d'), date('Y'))` qui crashaient sous PHP 8.4 (`mktime()` exige désormais des `?int`, `date()` renvoie des `string` → `TypeError`). Bugs latents dans des branches d'exécution rares mais critiques le jour où elles s'activeront.

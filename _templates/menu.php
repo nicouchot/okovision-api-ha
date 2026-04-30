@@ -85,8 +85,8 @@ function getMenu()
                    
                         <li class="dropdown-header"><span class="glyphicon glyphicon-download-alt" aria-hidden="true"></span> <?php echo session::getInstance()->getLabel('lang.text.menu.manual'); ?></li>    
                             <?php if (GET_CHAUDIERE_DATA_BY_IP) { ?><li><a href="amImpBoiler.php"><?php echo session::getInstance()->getLabel('lang.text.menu.manual.import.ip'); ?></a></li> <?php } ?>
-                            <?php if (GET_CHAUDIERE_DATA_BY_IP == 2) { ?><li><a href="amImpMail.php"><?php echo session::getInstance()->getLabel('lang.text.menu.manual.import.mail'); ?></a></li> <?php } ?>
                             <li><a href="amImpUsb.php"><?php echo session::getInstance()->getLabel('lang.text.menu.manual.import.usb'); ?></a></li>
+                            <?php if (GET_CHAUDIERE_DATA_BY_IP == 2) { ?><li><a href="amImpMail.php"><?php echo session::getInstance()->getLabel('lang.text.menu.manual.import.mail'); ?></a></li> <?php } ?>
                             <li><a href="amImportMass.php"><?php echo session::getInstance()->getLabel('lang.text.menu.manual.import.mass'); ?></a></li>
                             <li><a href="amSynthese.php"><?php echo session::getInstance()->getLabel('lang.text.menu.manual.synthese'); ?></a></li>
                     <li class="divider"></li>
