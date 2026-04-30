@@ -1,5 +1,13 @@
 ## Unrealised
 
+## 2.4.0-rc.3 — 2026-04-30 — Fix amSynthese.php : liste des jours sans synthèse vide (PHP 8.4)
+
+La page `amSynthese.php` n'affichait plus aucun jour importé sans synthèse au chargement (réponse AJAX `{"response":false,"debug":"mktime(): Argument #4 ($month) must be of type ?int, string given"}`).
+
+- **`_include/AdminMatrix.class.php` — `getDayWithoutSynthese()`** : `date('m')` / `date('d')` / `date('Y')` renvoient des `string` ; PHP 8.4 a renforcé la signature `mktime(?int, ?int, ?int, ?int, ?int, ?int)` et lève désormais un `TypeError` au lieu d'une coercition silencieuse. La construction `mktime(0, 0, 0, date('m'), date('d'), date('Y'))` était de toute façon une no-op (équivalente à minuit du jour courant) → simplifiée en `date('Y-m-d')`. La réponse AJAX redevient un JSON valide et le tableau se peuple avec les jours retournés par la requête anti-jointure `oko_historique_full LEFT JOIN oko_resume_day WHERE b.jour IS NULL`.
+
+Contexte : ces jours apparaissent typiquement après un import via `amImportMass.php` (qui ne déclenche pas de synthèse automatique, contrairement à `cron.php` qui enchaîne `csv2bdd()` + `makeSyntheseByDay()` à chaque passe).
+
 ## 2.4.0-rc.2 — 2026-04-30 — Fix index.php bloqué + import matrice (PHP 8.4)
 
 Page `index.php` figée sur l'animation de chargement et page `adminMatrix.php` incapable d'importer la matrice de référence : trois familles de régressions liées à la migration PHP 8.4 + `strict_types=1` corrigées.

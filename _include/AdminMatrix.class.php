@@ -176,7 +176,7 @@ class AdminMatrix extends connectDb
      */
     public function getDayWithoutSynthese(): void
     {
-        $now = date('Y-m-d', mktime(0, 0, 0, date('m'), date('d'), date('Y')));
+        $now = date('Y-m-d');
 
         $q = 'SELECT a.jour as jour FROM oko_historique_full as a '
            . 'LEFT OUTER JOIN oko_resume_day as b ON a.jour = b.jour '
