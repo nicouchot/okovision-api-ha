@@ -27,41 +27,76 @@ class AdminMatrix extends connectDb
      */
     public function uploadCsv(array $s, array $f): void
     {
-        $upload_handler = new UploadHandler();
+        // L'ancienne implémentation s'appuyait sur la lib UploadHandler de
+        // jQuery File Upload, qui appelle filesize() sur le tmp upload PHP.
+        // Sous Synology DSM, le tmp upload est placé dans /volume1/@tmp/
+        // qui est hors de open_basedir → filesize() warning → la lib croit
+        // le fichier vide ("File is too small") et n'effectue jamais le
+        // déplacement. On utilise donc move_uploaded_file() directement,
+        // qui contourne open_basedir par design pour les uploads HTTP.
 
-        if (isset($s['actionFile'])) {
-            if ('matrice' === $s['actionFile']) {
-                $matrice = 'matrice.csv';
-                $opt     = $upload_handler->getOption();
-                $rep     = $opt['upload_dir'];
+        $files     = $f['files'] ?? [];
+        $origName  = $files['name'][0] ?? '';
+        $tmpName   = $files['tmp_name'][0] ?? '';
+        $errorCode = (int) ($files['error'][0] ?? -1);
+        $size      = (int) ($files['size'][0] ?? 0);
+        $type      = (string) ($files['type'][0] ?? 'text/csv');
+        $action    = $s['actionFile'] ?? '';
 
-                if (file_exists($rep.$matrice)) {
-                    unlink($rep.$matrice);
-                }
+        $resp = [
+            'name' => $origName,
+            'size' => $size,
+            'type' => $type,
+            'url'  => '_tmp/'.$origName,
+        ];
 
-                if (rename($rep.$f['files']['name'][0], $rep.$matrice)) {
-                    if (!isset($s['update'])) {
-                        $this->initMatriceFromFile();
-                    } else {
-                        $this->updateMatriceFromFile();
-                    }
-                }
-            }
+        $emit = function (array $payload): void {
+            header('Content-type: application/json; charset=utf-8');
+            echo json_encode(['files' => [$payload]]);
+        };
 
-            if ('majusb' === $s['actionFile']) {
-                $matrice = 'import.csv';
-                $opt     = $upload_handler->getOption();
-                $rep     = $opt['upload_dir'];
+        if ($errorCode !== UPLOAD_ERR_OK || $tmpName === '' || !is_uploaded_file($tmpName)) {
+            $resp['error'] = 'Upload PHP error code '.$errorCode;
+            $emit($resp);
 
-                if (file_exists($rep.$matrice)) {
-                    unlink($rep.$matrice);
-                }
+            return;
+        }
 
-                rename($rep.$f['files']['name'][0], $rep.$matrice);
+        $targetName = match ($action) {
+            'matrice' => 'matrice.csv',
+            'majusb'  => 'import.csv',
+            default   => null,
+        };
+
+        if ($targetName === null) {
+            $resp['error'] = 'Unknown actionFile: '.$action;
+            $emit($resp);
+
+            return;
+        }
+
+        $target = CONTEXT.'/_tmp/'.$targetName;
+
+        if (file_exists($target) && !is_dir($target)) {
+            unlink($target);
+        }
+
+        if (!move_uploaded_file($tmpName, $target)) {
+            $resp['error'] = 'move_uploaded_file failed';
+            $emit($resp);
+
+            return;
+        }
+
+        if ($action === 'matrice') {
+            if (isset($s['update'])) {
+                $this->updateMatriceFromFile();
+            } else {
+                $this->initMatriceFromFile();
             }
         }
 
-        $upload_handler->generate_response_manual();
+        $emit($resp);
     }
 
     /**
@@ -183,11 +218,27 @@ class AdminMatrix extends connectDb
      */
     private function initMatriceFromFile(): void
     {
+        // Idempotence : on repart d'une oko_historique_full vierge pour éviter
+        // un "Duplicate column name 'col_N'" si la matrice a déjà été initialisée
+        // (cas typique : upload UI répété sans passer par deleteMatrice).
+        $this->query('TRUNCATE TABLE oko_capteur');
+        $this->query('DROP TABLE IF EXISTS oko_historique_full');
+        $this->query(
+            'CREATE TABLE `oko_historique_full` ('
+            .'jour DATE NOT NULL,'
+            .'heure TIME NOT NULL,'
+            .'timestamp int(11) unsigned NOT NULL,'
+            .'PRIMARY KEY (jour, heure)'
+            .') ENGINE=MYISAM DEFAULT CHARSET=utf8'
+        );
+
         $dico  = json_decode(file_get_contents('_langs/'.session::getInstance()->getLang().'.matrice.json'), true);
         $line  = trim(fgets(fopen('_tmp/matrice.csv', 'r')));
 
-        $string = substr($line, 0, strlen($line) - 2);
-        $line   = mb_convert_encoding($string, 'UTF-8', mb_detect_encoding($string, 'UTF-8, ISO-8859-1, ISO-8859-15', true));
+        // L'entête CSV de la chaudière finit typiquement par ';' ; on retire
+        // ce séparateur de fin pour ne pas générer un capteur "vide".
+        $line   = rtrim($line, ';');
+        $line   = mb_convert_encoding($line, 'UTF-8', mb_detect_encoding($line, 'UTF-8, ISO-8859-1, ISO-8859-15', true));
 
         $this->log->debug('Class '.__CLASS__.' | '.__FUNCTION__.' | CSV First Line | '.$line);
 

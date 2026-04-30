@@ -252,10 +252,4 @@ class gstGraphique extends connectDb
 
         $this->sendResponse($r);
     }
-
-    private function sendResponse(array $t): void
-    {
-        header('Content-type: text/json');
-        echo json_encode($t, JSON_NUMERIC_CHECK);
-    }
 }

@@ -291,9 +291,15 @@ class realTime extends connectDb
         $this->sendResponse($o->getResponseBoiler());
     }
 
-    private function sendResponse(string $t): void
+    /**
+     * Override : les méthodes de realTime construisent déjà le JSON elles-mêmes
+     * (json_encode à la main). On se contente d'émettre la chaîne telle quelle
+     * sans re-encoder comme le ferait connectDb::sendResponse(). Visibilité
+     * protected + signature mixed pour respecter la compatibilité LSP.
+     */
+    protected function sendResponse(mixed $t): void
     {
         header('Content-type: text/json; charset=utf-8');
-        echo $t;
+        echo (string) $t;
     }
 }

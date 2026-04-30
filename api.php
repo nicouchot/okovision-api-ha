@@ -7,6 +7,12 @@
 
 include_once 'config.php';
 
+// Réponses API = JSON pur. Les warnings/deprecations PHP affichés dans le
+// corps HTTP corrompent la réponse et cassent les clients (jQuery, Home
+// Assistant, etc.). On force display_errors=0 ; les erreurs restent loguées
+// via log_errors=1.
+ini_set('display_errors', '0');
+
 function is_ajax()
 {
     //return isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest';

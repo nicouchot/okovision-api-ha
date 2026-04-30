@@ -1,5 +1,23 @@
 ## Unrealised
 
+## 2.4.0-rc.2 — 2026-04-30 — Fix index.php bloqué + import matrice (PHP 8.4)
+
+Page `index.php` figée sur l'animation de chargement et page `adminMatrix.php` incapable d'importer la matrice de référence : trois familles de régressions liées à la migration PHP 8.4 + `strict_types=1` corrigées.
+
+- **Conflit de visibilité `sendResponse()`** (régression Phase 5 alpha.2) : `connectDb::sendResponse(mixed $data): void` est `protected` mais trois classes filles déclaraient encore `private function sendResponse(string|array $t): void` hérité de la version V3 ; PHP 8.4 lève `Fatal error: Access level to <child>::sendResponse() must be protected (as in class connectDb) or weaker`. Toutes les méthodes des trois classes étaient impactées (loader index.php bloqué, graphes muets).
+  - `_include/rendu.class.php` : `private string` → `protected mixed` (LSP), corps inchangé (les callers pré-encodent en JSON).
+  - `_include/realTime.class.php` : idem.
+  - `_include/gstGraphique.class.php` : suppression de l'override (sémantique identique au parent).
+
+- **Réponses ajax/API corrompues par `display_errors=1`** : sur le vhost dev, les warnings/deprecations PHP sont affichés inline dans le corps HTTP, ce qui casse `JSON.parse` côté jQuery (les `done()` callbacks ne se déclenchent jamais). Pratique OWASP standard : silencer l'affichage sur les dispatchers de réponse.
+  - `ajax.php` : `ini_set('display_errors', '0')` en tête de dispatcher (les erreurs restent loguées via `log_errors=1`).
+  - `api.php` : idem.
+
+- **Upload de la matrice cassé sur Synology DSM** : `AdminMatrix::uploadCsv()` s'appuyait sur la lib jQuery File Upload (`UploadHandler.class.php`), incompatible PHP 8.4 (création de propriétés dynamiques, `parse_url(null)`, `stripslashes(null)`) et qui appelle `filesize()` sur le tmp upload PHP. Sous DSM, `upload_tmp_dir = /volume1/@tmp/` est hors `open_basedir` → `filesize()` warning → la lib croit le fichier vide ("File is too small") → `move_uploaded_file()` jamais appelé. Réécriture : appel direct de `move_uploaded_file()` (qui contourne `open_basedir` par design pour les uploads HTTP) + réponse JSON formatée comme attendue par le plugin jQuery File Upload (`{"files":[{"name":..., "size":..., "type":..., "url":...}]}`).
+  - `_include/AdminMatrix.class.php` :
+    - `uploadCsv()` : suppression de la dépendance à `UploadHandler`, gestion directe via `move_uploaded_file()` + `is_uploaded_file()`. Retourne maintenant des codes d'erreur explicites (`Upload PHP error code N`, `Unknown actionFile`, `move_uploaded_file failed`).
+    - `initMatriceFromFile()` : rendu idempotent — `TRUNCATE oko_capteur` + `DROP/CREATE oko_historique_full` au début pour éviter `Duplicate column name 'col_N'` quand la matrice était déjà initialisée. Et `rtrim($line, ';')` pour retirer le `;` final de l'entête CSV (remplace l'antipattern `substr($line, 0, strlen($line) - 2)` qui chopait deux caractères en trop).
+
 ## 2.4.0-rc.1 — 2026-04-30 — Fix import depuis la chaudière (firmware V4)
 
 Déblocage de la v2.4.0 : trois bugs en chaîne empêchaient l'import via la page `amImpBoiler.php` ; l'erreur initiale "Échec de l'importation" masquait des causes racines distinctes corrigées une à une.

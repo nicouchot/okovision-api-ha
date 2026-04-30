@@ -422,10 +422,17 @@ class rendu extends connectDb
         $this->sendResponse(json_encode($r));
     }
 
-    private function sendResponse(string $t): void
+    /**
+     * Override : les méthodes de rendu construisent déjà le JSON elles-mêmes
+     * (json_encode à la main, ou fragments concaténés type '{"grapheData":...}').
+     * On se contente d'émettre la chaîne telle quelle, sans re-encoder comme
+     * le ferait connectDb::sendResponse(). Visibilité protected + signature
+     * mixed pour respecter la compatibilité LSP avec le parent.
+     */
+    protected function sendResponse(mixed $t): void
     {
         header('Content-type: text/json; charset=utf-8');
-        echo $t;
+        echo (string) $t;
     }
 
     private function getDataWithTime(string $q): string

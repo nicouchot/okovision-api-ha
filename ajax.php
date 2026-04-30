@@ -10,6 +10,13 @@
 */
 
 include_once 'config.php';
+
+// Réponses ajax = JSON pur. Les warnings/deprecations PHP affichés dans le
+// corps HTTP corrompent la réponse JSON et cassent jQuery .done(). On force
+// donc display_errors=0 sur ce dispatcher ; les erreurs restent loguées via
+// log_errors=1 et les exceptions sont capturées plus bas.
+ini_set('display_errors', '0');
+
 set_exception_handler(function(\Throwable $e): void {
     header('Content-type: text/json; charset=utf-8');
     echo json_encode(['response' => false, 'debug' => $e->getMessage().' in '.$e->getFile().':'.$e->getLine()]);
