@@ -22,41 +22,56 @@ class AdminImport extends connectDb
     /**
      * Get file list from boiler (V4 firmware — JSON API).
      *
-     * Fetches the current day's CSV (log0) from the V4 JSON endpoint,
-     * extracts the log date, and builds a list of the 4 most recent
-     * daily log URLs that the client can then import individually.
+     * Le firmware V4 expose 4 slots (/log0../log3) en buffer tournant. Un slot
+     * peut renvoyer du CSV (entête "Datum") ou la page d'aide (HTTP 200) ou
+     * "Wait 2500ms" (HTTP 401) s'il est vide ou rate-limité. On affiche les
+     * 4 slots avec, pour chacun, la date extraite du CSV ou "(vide)".
      */
     public function getFileFromChaudiere(): void
     {
-        $r['response'] = true;
+        $r    = ['response' => true, 'listefiles' => []];
+        $base = 'http://'.CHAUDIERE.':'.PORT_JSON.'/'.PASSWORD_JSON;
 
-        ini_set('auto_detect_line_endings', true);
-
-        $ch = curl_init('http://'.CHAUDIERE.':'.PORT_JSON.'/'.PASSWORD_JSON.'/log0');
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        $csv = mb_convert_encoding(curl_exec($ch), 'UTF-8', 'ISO-8859-1');
-
-        $Data = str_getcsv($csv, "\n");
-
-        foreach ($Data as $key => $Row) {
-            $Row         = str_getcsv($Row, ';');
-            $array[$key] = $Row;
-        }
-        $dateArray = explode('.', $array[1][0]);
-
-        $t_href = [];
         for ($i = 0; $i < 4; $i++) {
-            $logDate = date('Ymd', strtotime($dateArray[2].'-'.$dateArray[1].'-'.$dateArray[0].' +'.$i.' day'));
+            if ($i > 0) {
+                usleep(2_700_000); // rate-limit V4 ≥ 2500 ms entre requêtes
+            }
 
-            array_push(
-                $t_href,
-                [
-                    'file' => 'log'.$i.' : touch_'.$logDate.'.csv',
-                    'url'  => 'http://'.CHAUDIERE.':'.PORT_JSON.'/'.PASSWORD_JSON.'/log'.$i,
-                ]
-            );
+            $url = $base.'/log'.$i;
+            $ch  = curl_init($url);
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT        => 30,
+                CURLOPT_CONNECTTIMEOUT => 5,
+            ]);
+            $resp = curl_exec($ch);
+            $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            $logDate = '';
+            $isCsv   = $code === 200 && is_string($resp) && str_starts_with($resp, 'Datum');
+
+            if ($isCsv) {
+                $csv   = mb_convert_encoding($resp, 'UTF-8', 'ISO-8859-1');
+                $lines = preg_split("/\r?\n/", $csv, 3) ?: [];
+                $cells = isset($lines[1]) ? str_getcsv($lines[1], ';') : [];
+                $parts = isset($cells[0]) ? explode('.', $cells[0]) : [];
+
+                if (count($parts) === 3) {
+                    $ts = strtotime($parts[2].'-'.$parts[1].'-'.$parts[0]);
+                    if ($ts !== false) {
+                        $logDate = date('Ymd', $ts);
+                    }
+                }
+            }
+
+            $r['listefiles'][] = [
+                'file' => $isCsv
+                    ? 'log'.$i.' : touch_'.$logDate.'.csv'
+                    : 'log'.$i.' : (slot vide)',
+                'url'  => $url,
+            ];
         }
-        $r['listefiles'] = $t_href;
 
         $this->sendResponse($r);
     }

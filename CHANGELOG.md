@@ -1,5 +1,18 @@
 ## Unrealised
 
+## 2.4.0-rc.1 — 2026-04-30 — Fix import depuis la chaudière (firmware V4)
+
+Déblocage de la v2.4.0 : trois bugs en chaîne empêchaient l'import via la page `amImpBoiler.php` ; l'erreur initiale "Échec de l'importation" masquait des causes racines distinctes corrigées une à une.
+
+- **`_include/AdminImport.class.php` — `getFileFromChaudiere()`** : refonte. Le firmware V4 expose 4 slots `/log0../log3` en buffer tournant ; un slot vide retourne soit la page d'aide HTTP 200 soit "Wait 2500ms" HTTP 401. L'ancien code supposait que `/log0` contenait toujours du CSV avec une date sur la ligne 2, ce qui provoquait un `TypeError: explode(): Argument #2 must be of type string, null given` sous PHP 8.4 + `strict_types=1`. Désormais on sonde séquentiellement les 4 slots (avec respect du rate-limit ≥ 2500 ms entre requêtes), on parse la date depuis le CSV quand il y en a un, et on liste systématiquement les 4 slots avec mention `(slot vide)` pour ceux qui ne contiennent pas de CSV.
+- **`_include/okofen.class.php` — `download()`** : ajout d'un retry x3 espacé de 3 s, identique au fix appliqué sur master au commit `3f54d5a`. Le rate-limit V4 (HTTP 401 si < 2500 ms entre deux requêtes) faisait échouer l'import en single-shot quand l'utilisateur cliquait juste après le chargement de la liste.
+- **`_include/okofen.class.php` — `csv2bdd()`** :
+  - `while (!feof($file)) { $ligne = fgets(...); strlen($ligne) - 2 }` → `while (($ligne = fgets()) !== false) { rtrim($ligne, "\r\n") }`. La forme `!feof()` ne capture pas un retour `false` de `fgets()` en fin de fichier : sous PHP 8.4, `strlen(false)` lève un `TypeError`.
+  - Garde-fou sur `$capteurStatus['position_column_csv']` : quand le capteur `type=status` n'est pas configuré dans `oko_capteur`, la détection de début de cycle est désormais sautée proprement plutôt que d'émettre des warnings à chaque ligne. Avec `display_errors=1` sur le vhost dev, ces warnings se glissaient dans le corps de la réponse HTTP et corrompaient le JSON, provoquant un faux `response=false` côté client malgré un import en base réussi.
+- **`_include/version.json`** : 2.1.2 → 2.4.0-rc.1 (rattrapage : le fichier était resté en 2.1.2 alors que le changelog était déjà en 2.4.0-alpha.3).
+
+État de la chaudière de référence : firmware V4.00b, 4 slots `/logN` rotatifs, rate-limit minimum 2500 ms entre requêtes JSON.
+
 ## 2.4.0-alpha.3 — 2026-04-27 — Phase 5 — sous-commit 5.3 : éclatement d'administration.class.php
 
 Suppression du dernier monolithe admin : `administration.class.php` (823 LOC) découpé en 5 classes cohésives, toutes `declare(strict_types=1)`, toutes < 200 LOC.

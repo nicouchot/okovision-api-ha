@@ -86,15 +86,21 @@ class okofen extends connectDb
         $startCycle = $ob_capteur->getByType('startCycle');
         unset($ob_capteur);
 
+        // Index de la colonne status dans le CSV ; null si capteur non configuré
+        // → on saute alors la détection de début de cycle plutôt que d'émettre
+        // des warnings sur chaque ligne (qui corromperaient la réponse JSON).
+        $statusColIdx = isset($capteurStatus['position_column_csv'])
+            ? (int) $capteurStatus['position_column_csv']
+            : null;
+
         $file = fopen(CSVFILE, 'r');
         $ln = 0;
         $old_status = 0;
         $nbColCsv = count($capteurs);
 
         $insert = 'INSERT IGNORE INTO oko_historique_full SET ';
-        while (!feof($file)) {
-            $ligne = fgets($file);
-            $ligne = substr($ligne, 0, strlen($ligne) - 2);
+        while (($ligne = fgets($file)) !== false) {
+            $ligne = rtrim($ligne, "\r\n");
 
             if ($ln != 0) {
                 $colCsv = explode(CSV_SEPARATEUR, $ligne);
@@ -110,8 +116,12 @@ class okofen extends connectDb
 
                     $query = $insert.$beginValue;
 
-                    if ('4' == $colCsv[$capteurStatus['position_column_csv']] && $colCsv[$capteurStatus['position_column_csv']] != $old_status) {
-                        $query .= ', col_'.$startCycle['column_oko'].'=1';
+                    if ($statusColIdx !== null && isset($colCsv[$statusColIdx])) {
+                        $statusVal = $colCsv[$statusColIdx];
+                        if ('4' === $statusVal && $statusVal !== $old_status && isset($startCycle['column_oko'])) {
+                            $query .= ', col_'.$startCycle['column_oko'].'=1';
+                        }
+                        $old_status = $statusVal;
                     }
 
                     for ($i = 2; $i <= $nbColCsv; ++$i) {
@@ -121,7 +131,6 @@ class okofen extends connectDb
                     $query .= ';';
                     $this->log->debug('Class '.__CLASS__.' | '.__FUNCTION__.' | '.$query);
                     $this->query($query);
-                    $old_status = $colCsv[$capteurStatus['position_column_csv']];
                 }
             }
             ++$ln;
@@ -203,26 +212,48 @@ class okofen extends connectDb
         return [];
     }
 
+    /**
+     * Télécharge $file_source vers $file_target avec retry x3 espacé de 3s
+     * pour absorber le rate-limit de l'API V4 (HTTP 401 si < 2500ms entre
+     * deux requêtes successives).
+     */
     private function download(string $file_source, string $file_target): bool
     {
-        $wh = @fopen($file_target, 'w+b');
-        if ($wh === false) {
-            return false;
+        $maxAttempts = 3;
+        $retryDelay  = 3;
+
+        for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+            $ch = curl_init($file_source);
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_FOLLOWLOCATION => true,
+                CURLOPT_TIMEOUT        => 30,
+                CURLOPT_CONNECTTIMEOUT => 5,
+            ]);
+            $body     = curl_exec($ch);
+            $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curlErr  = curl_error($ch);
+            curl_close($ch);
+
+            if ($curlErr !== '' || $httpCode !== 200 || !is_string($body)) {
+                if ($attempt < $maxAttempts) {
+                    sleep($retryDelay);
+                    continue;
+                }
+                return false;
+            }
+
+            $wh = @fopen($file_target, 'w+b');
+            if ($wh === false) {
+                return false;
+            }
+            fwrite($wh, $body);
+            fclose($wh);
+
+            return true;
         }
 
-        $ch = curl_init($file_source);
-        curl_setopt_array($ch, [
-            CURLOPT_FILE           => $wh,
-            CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_TIMEOUT        => 30,
-            CURLOPT_FAILONERROR    => true,
-        ]);
-
-        $ok = curl_exec($ch);
-        curl_close($ch);
-        fclose($wh);
-
-        return $ok !== false;
+        return false;
     }
 
     private function cvtDec(string $n): string
