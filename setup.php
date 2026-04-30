@@ -61,7 +61,7 @@
         $nb_day = ($stop_day - $start_day) / 86400;
         $query = 'INSERT INTO oko_dateref (jour) VALUES ';
         for ($i = 0; $i <= $nb_day; ++$i) {
-            $day = date('Y-m-d', mktime(0, 0, 0, date('m', $start_day), date('d', $start_day) + $i, date('Y', $start_day)));
+            $day = date('Y-m-d', $start_day + ($i * 86400));
             $query .= "('".$day."'),";
         }
 

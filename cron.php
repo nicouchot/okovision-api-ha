@@ -32,7 +32,7 @@ if (GET_CHAUDIERE_DATA_BY_IP) {
     }
 } else {
     // on lance le traitement pour la veille seulement :
-    $day = date('Y-m-d', mktime(0, 0, 0, date('m'), date('d') - 1, date('Y')));
+    $day = date('Y-m-d', strtotime('-1 day'));
     $oko->makeSyntheseByDay($day, false);
 }
 

@@ -1,5 +1,12 @@
 ## Unrealised
 
+## 2.4.0-rc.4 — 2026-04-30 — Fix mktime() résiduels cron.php + setup.php (PHP 8.4)
+
+Suite logique de rc.3 : nettoyage des deux dernières occurrences du pattern `mktime(0, 0, 0, date('m'), date('d'), date('Y'))` qui crashaient sous PHP 8.4 (`mktime()` exige désormais des `?int`, `date()` renvoie des `string` → `TypeError`). Bugs latents dans des branches d'exécution rares mais critiques le jour où elles s'activeront.
+
+- **`cron.php:35`** : branche `else` du traitement des fichiers mail — exécutée uniquement quand `_tmp/` est vide (aucun mail à traiter). En cas de crash : synthèse de la veille jamais calculée, échec silencieux du cron. Remplacement par `date('Y-m-d', strtotime('-1 day'))` (équivalent fonctionnel, gère naturellement le 1er du mois).
+- **`setup.php:64`** : script d'installation initiale, pré-remplissage de `oko_dateref` (2014-09-01 → 2037-09-01). Crash bloquerait toute nouvelle installation. Ici on décale `$start_day` de `$i` jours → simplification en arithmétique directe sur le timestamp : `$start_day + ($i * 86400)`.
+
 ## 2.4.0-rc.3 — 2026-04-30 — Fix amSynthese.php : liste des jours sans synthèse vide (PHP 8.4)
 
 La page `amSynthese.php` n'affichait plus aucun jour importé sans synthèse au chargement (réponse AJAX `{"response":false,"debug":"mktime(): Argument #4 ($month) must be of type ?int, string given"}`).
