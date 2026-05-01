@@ -1,5 +1,9 @@
 ## Unrealised
 
+## 2.4.0 — 2026-05-01 — Release finale : corrections post refactoring
+
+Stabilisation complète de la v2.4.0 après éclatement d'`administration.class.php` (Phase 5). Cinq release candidates ont corrigé les régressions PHP 8.4 introduites par le refactoring et harmonisé le menu « Actions Manuelles ». Détail ci-dessous.
+
 ## 2.4.0-rc.5 — 2026-04-30 — Refonte libellés menu « Actions Manuelles »
 
 Réorganisation et clarification du sous-menu « Actions Manuelles » : la page upload USB est en réalité un upload de fichier CSV (peu importe sa provenance), elle remonte donc en 2e position juste après l'import direct chaudière. Les libellés sont harmonisés pour rendre lisible le périmètre de chaque page (source des données + lieu de stockage intermédiaire).

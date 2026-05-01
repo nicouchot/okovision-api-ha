@@ -16,17 +16,41 @@ Interface web de supervision d'une chaudière Okofen — firmware **V3** (HTML/C
 
 ## Chantiers réalisés
 
-### Compatibilité firmware 4.00b (v2.0.0, inspirée de skydarc)
+### Compatibilité firmware 4.00b (v2.0)
 
-Rapatriement par phases des apports V4 du fork `skydarc/okovision_v2` : socle config (constantes JSON/mail), cœur V4 dans `administration.class.php` + scripts `_include/bin_v4/*` (API JSON chaudière, import CSV via IMAP), UI admin (formulaires JSON/mail, routage V3/V4, page `amImpMail.php`), dashboard temps réel dédié (`rt_v4.php`). Reconstruction propre de l'import mail en phase finale (RC) pour remplacer la version provisoire rapatriée.
+Rapatriement des apports V4 du fork [skydarc/okovision_v2](https://github.com/skydarc/okovision_v2).
 
-### Compatibilité PHP 8.4 (v2.1.0)
+- Support firmware V4 (API JSON) : config, import, dashboard temps réel (`rt_v4.php`)
+- Import CSV via boîte mail IMAP (scripts `_include/bin_v4/*`)
+- UI admin : formulaires JSON/mail, routage automatique V3/V4, page `amImpMail.php`
+- Reconstruction propre de l'import mail en phase RC (remplace la version provisoire de skydarc)
 
-Mise en conformité du code legacy (origine PHP 7.x) avec PHP 8.4. Remplacement de `utf8_encode()` (supprimée depuis 8.2) par `mb_convert_encoding($s, 'UTF-8', 'ISO-8859-1')` dans 4 fichiers (`administration.class.php`, `set_captor.php`, `get_softVersion.php`, `get_captor_lim.php`). Audit nullable-implicites : aucun cas. **Note IMAP** : l'extension `ext/imap` a été retirée du core PHP 8.4 et n'est plus bundlée sur certaines distributions — une migration vers une librairie userland (ex. `ddeboer/imap`, `webklex/php-imap`) sera nécessaire avant PHP 9.
+### Compatibilité PHP 8.4 + correctifs admin (v2.1)
 
-### Refactoring de l'import mail (v2.1.2)
+- Remplacement de `utf8_encode()` (supprimée en 8.2) par `mb_convert_encoding()` dans 4 fichiers
+- Fix persistance du mode de récupération CSV (`config.php` : coercition booléenne → entier)
+- Refonte sous-système IMAP : façade `mail.class.php`, sécurisation des endpoints (session requise, POST), diagnostic d'erreurs structuré JSON avec labels i18n FR/EN
+- Note : `ext/imap` retiré du core PHP 8.4 — migration vers librairie userland prévue avant PHP 9
 
-Refonte complète du sous-système mail pour corriger un bug de non-fonctionnement et éliminer plusieurs défauts structurels. Création de `_include/mail.class.php` : façade centralisée sur l'extension IMAP (ouverture, diagnostic, parsing d'attachments factorisé — ex-duplication 3×). Durcissement sécurité : `test_mail.php`, `download_csv.php`, `delete_mail.php` désormais inaccessibles sans session authentifiée (antérieurement publics). Bouton « Test » passe de GET à POST (mot de passe hors URL/logs). Les endpoints retournent un JSON structuré `{ success, error: { code, message, diagnose } }` permettant un diagnostic précis côté UI (extension manquante, auth KO, serveur injoignable), avec labels i18n FR/EN dédiés.
+### Sécurité, typage et socle qualité (v2.2)
+
+- Socle qualité : `composer.json`, PHPStan niveau 3, PHP-CS-Fixer PSR-12, `declare(strict_types=1)` sur toutes les classes
+- Sécurité : 15+ injections SQL → `prepare()`, helper XSS `e()`, token CSRF `random_bytes(16)`
+- Typage complet des classes `_include/*.class.php` (propriétés, paramètres, retours)
+- Fix régressions PHP 8.4 sur `rt_v4.php` et `adminParam.php` (spinner bloqué, bouton « Tester » inopérant)
+
+### Refactoring templates temps réel (v2.3)
+
+- Extraction des blocs communs `rt.php` / `rt_v4.php` en helpers partagés (`_templates/rt/`)
+- Helper `sensor_panel.php` paramétrable : −611 LOC net (38 panels migrés)
+- Modale d'édition capteur + bloc de chargement factorisés
+
+### Refactoring architecture admin (v2.4)
+
+- Éclatement de `administration.class.php` (823 LOC) en 7 classes spécialisées (< 200 LOC chacune)
+- Routeur ajax par table de closures (`ajax_routes.php`) : `ajax.php` passe de 340 à 51 LOC
+- Fix régressions PHP 8.4 post-refactoring (`sendResponse`, `mktime`, upload matrice, `display_errors`)
+- Réorganisation et clarification du menu « Actions Manuelles »
 
 ## Licence
 
