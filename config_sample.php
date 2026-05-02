@@ -62,10 +62,13 @@ DEFINE('SEND_TO_WEB', ($config['send_to_web']==1)?true:false); // default -> fal
 //
 // Utilisation d'un silo
 DEFINE('HAS_SILO', ($config['has_silo']==1)?true:false); // default -> true //json
-DEFINE('SILO_SIZE', (isset($config['silo_size']))?$config['silo_size']:''); // kg 
-DEFINE('ASHTRAY', (isset($config['ashtray']))?$config['ashtray']:''); // kg 
+DEFINE('SILO_SIZE', (isset($config['silo_size']))?$config['silo_size']:''); // kg
+DEFINE('ASHTRAY', (isset($config['ashtray']))?$config['ashtray']:''); // kg
+// Calcul énergétique pellet
+DEFINE('PCI_PELLET',          !empty($config['pci_pellet']) ? (float)$config['pci_pellet'] : 4.90); // kWh/kg //json
+DEFINE('RENDEMENT_CHAUDIERE', !empty($config['rendement'])  ? (float)$config['rendement']  : 89.50); // %       //json
 /****
-	DONT'T TOUCH 
+	DONT'T TOUCH
 ****/
 //Parametres globaux
 DEFINE('CONTEXT', '###_CONTEXT_###' );

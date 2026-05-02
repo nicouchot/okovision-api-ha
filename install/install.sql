@@ -38,7 +38,13 @@ CREATE TABLE IF NOT EXISTS `oko_resume_day` (
   `conso_kg` decimal(6,2) DEFAULT NULL,
   `conso_ecs_kg` decimal(6,2) DEFAULT NULL,
   `dju` decimal(6,2) DEFAULT NULL,
-  `nb_cycle` int(1) unsigned zerofill DEFAULT '0',
+  `nb_cycle`     int(1) unsigned zerofill DEFAULT '0',
+  `conso_kwh`    DECIMAL(10,2) DEFAULT NULL,
+  `cumul_kg`     DECIMAL(10,2) DEFAULT NULL,
+  `cumul_kwh`    DECIMAL(10,2) DEFAULT NULL,
+  `cumul_cycle`  INT(11) UNSIGNED DEFAULT NULL,
+  `prix_kg`      DECIMAL(10,4) DEFAULT NULL,
+  `prix_kwh`     DECIMAL(10,4) DEFAULT NULL,
   PRIMARY KEY (`jour`)
 ) ENGINE=MYISAM DEFAULT CHARSET=utf8;
 

@@ -97,6 +97,8 @@
             'tc_ref' => $s['param_tcref'],
             'poids_pellet' => $s['param_poids_pellet'],
             'surface_maison' => $s['surface_maison'],
+            'pci_pellet'     => $s['param_pci_pellet'] ?? 4.90,
+            'rendement'      => $s['param_rendement']  ?? 89.50,
             'get_data_from_chaudiere' => $s['oko_typeconnect'],
             'send_to_web' => '0',
             'has_silo' => '0',
@@ -312,13 +314,31 @@
 					
 					<!-- Text input-->
 					<div class="form-group">
-					  <label class="col-md-4 control-label" for="parap_poids_pellet">House surface : </label>  
+					  <label class="col-md-4 control-label" for="parap_poids_pellet">House surface : </label>
 					  <div class="col-md-3">
 					  <input id="surface_maison" name="param_surface" type="text" placeholder="ex : 180" class="form-control input-md" required=""  value="180">
-					  <span class="help-block">in m²</span>  
+					  <span class="help-block">in m²</span>
 					  </div>
 					</div>
-				
+
+					<!-- Text input-->
+					<div class="form-group">
+					  <label class="col-md-4 control-label" for="param_pci_pellet">Pellet calorific value (kWh/kg) :</label>
+					  <div class="col-md-3">
+					  <input id="param_pci_pellet" name="param_pci_pellet" type="number" step="0.01" min="0" max="10" placeholder="ex : 4.90" class="form-control input-md" value="4.90">
+					  <span class="help-block">Net calorific value of pellets (PCI)</span>
+					  </div>
+					</div>
+
+					<!-- Text input-->
+					<div class="form-group">
+					  <label class="col-md-4 control-label" for="param_rendement">Boiler efficiency (%) :</label>
+					  <div class="col-md-3">
+					  <input id="param_rendement" name="param_rendement" type="number" step="0.01" min="0" max="100" placeholder="ex : 89.50" class="form-control input-md" value="89.50">
+					  <span class="help-block">Boiler combustion efficiency</span>
+					  </div>
+					</div>
+
 				</fieldset>
 			</form>
             
