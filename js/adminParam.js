@@ -139,6 +139,8 @@ $(document).ready(function() {
             has_silo: $('#oko_loadingmode').val(),
             silo_size: $('#oko_silo_size').val(),
 			ashtray : $('#oko_ashtray').val(),
+			param_pci_pellet : $('#param_pci_pellet').val(),
+			param_rendement  : $('#param_rendement').val(),
 			lang : $('input[name=oko_language]:checked').val()
 		};
 		
@@ -158,7 +160,44 @@ $(document).ready(function() {
 
 	});
 
-	
+	$('#bt_recalc_histo').click(function() {
+
+		var $btn  = $(this);
+		var $icon = $('#bt_recalc_icon');
+		var $res  = $('#recalc_result');
+
+		$btn.prop('disabled', true);
+		$icon.addClass('glyphicon-refresh');
+		$res.hide();
+
+		$.api('POST', 'admin.recalcHistorique', {}, false).done(function(json) {
+			$btn.prop('disabled', false);
+			if (json && json.response) {
+				$res
+					.removeClass('alert-danger').addClass('alert-success')
+					.html(
+						'<strong>Recalcul terminé en ' + json.elapsed + ' s.</strong><br>' +
+						json.rows + ' lignes recalculées &mdash; ' +
+						json.lots + ' lot(s) PELLET &mdash; ' +
+						'PCI&nbsp;: ' + json.pci + '&nbsp;kWh/kg &mdash; ' +
+						'Rendement&nbsp;: ' + json.rendement + '&nbsp;%'
+					)
+					.show();
+			} else {
+				$res
+					.removeClass('alert-success').addClass('alert-danger')
+					.html('<strong>Erreur lors du recalcul.</strong>')
+					.show();
+			}
+		}).fail(function() {
+			$btn.prop('disabled', false);
+			$res
+				.removeClass('alert-success').addClass('alert-danger')
+				.html('<strong>Erreur de communication.</strong>')
+				.show();
+		});
+
+	});
 
 
 });

@@ -154,10 +154,28 @@
     					  <label class="col-md-4 control-label" for="parap_poids_pellet"><?php echo session::getInstance()->getLabel('lang.text.page.admin.param.surface'); ?></label>  
     					  <div class="col-md-3">
     					  <input id="surface_maison" name="param_surface" type="text" placeholder="ex : 180" class="form-control input-md" required=""  value="<?php echo SURFACE_HOUSE; ?>">
-    					  <span class="help-block"><?php echo session::getInstance()->getLabel('lang.text.page.admin.param.surface.desc'); ?></span>  
+    					  <span class="help-block"><?php echo session::getInstance()->getLabel('lang.text.page.admin.param.surface.desc'); ?></span>
     					  </div>
     					</div>
-				
+
+    					<!-- Text input-->
+    					<div class="form-group">
+    					  <label class="col-md-4 control-label" for="param_pci_pellet">Pouvoir Calorifique du pellet (kWh/kg)</label>
+    					  <div class="col-md-3">
+    					  <input id="param_pci_pellet" name="param_pci_pellet" type="number" step="0.01" min="0" max="10" placeholder="ex : 4.90" class="form-control input-md" value="<?php echo PCI_PELLET; ?>">
+    					  <span class="help-block">Pouvoir Calorifique Inférieur du pellet utilisé (0–10 kWh/kg). Valeur typique : 4,90 kWh/kg.</span>
+    					  </div>
+    					</div>
+
+    					<!-- Text input-->
+    					<div class="form-group">
+    					  <label class="col-md-4 control-label" for="param_rendement">Rendement de la chaudière (%)</label>
+    					  <div class="col-md-3">
+    					  <input id="param_rendement" name="param_rendement" type="number" step="0.01" min="0" max="100" placeholder="ex : 89.50" class="form-control input-md" value="<?php echo RENDEMENT_CHAUDIERE; ?>">
+    					  <span class="help-block">Rendement de combustion de la chaudière (0–100 %). Valeur typique : 89,50 %.</span>
+    					  </div>
+    					</div>
+
 				    </fieldset>
     			
 
@@ -226,6 +244,25 @@
                 <div  align="center">
 					    <button id="bt_save_infoge" name="bt_save_infoge" class="btn btn-primary" type="button"><?php echo session::getInstance()->getLabel('lang.text.page.admin.save'); ?></button>
 				</div>
+
+            <fieldset style="margin-bottom:40px;">
+                <legend>Recalcul de l'historique</legend>
+                <div class="form-group">
+                  <p class="col-md-offset-2 col-md-8 text-muted">
+                    Recalcule l'ensemble des données dérivées sur tout l'historique stocké&nbsp;:
+                    consommation kWh, cumulatifs (kg / kWh / cycles), prix au kg et au kWh.<br>
+                    <strong>À relancer après chaque modification du PCI pellet ou du rendement chaudière.</strong>
+                  </p>
+                </div>
+                <div align="center">
+                    <button id="bt_recalc_histo" class="btn btn-warning" type="button">
+                        <span class="glyphicon glyphicon-refresh" id="bt_recalc_icon"></span>
+                        &nbsp;Recalculer l'historique
+                    </button>
+                </div>
+                <div id="recalc_result" style="display:none; margin-top:14px;" class="alert alert-success text-center"></div>
+            </fieldset>
+
             </div>
             
             
