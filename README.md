@@ -52,6 +52,18 @@ Rapatriement des apports V4 du fork [skydarc/okovision_v2](https://github.com/sk
 - Fix régressions PHP 8.4 post-refactoring (`sendResponse`, `mktime`, upload matrice, `display_errors`)
 - Réorganisation et clarification du menu « Actions Manuelles »
 
+### Rapatriement master non-HA (v2.5)
+
+- Calcul kWh quotidien à partir du PCI pellet et du rendement chaudière (saisis dans adminParam)
+- Cumulatifs (kg / kWh / cycles) recalculés à chaque synthèse journalière
+- Prix au kg en logique FIFO sur les livraisons (`oko_silo_events`)
+- Bouton « Recalculer l'historique » (admin) après changement de PCI/rendement
+- Page historique : badges Énergie/Coût mois/saison + colonne « Coût (€) » + série kWh
+- Import firmware V4 trois niveaux (log0 24h glissantes / retry log1 / snapshot live `/all?`)
+- Détection des cycles depuis la BDD via `recalcStartCycleForDay()` (élimine les faux démarrages minuit)
+- Performance : `csv2bdd()` en batch `INSERT IGNORE`
+- Migration idempotente (`migrate_v2.php`) pour installs existantes
+
 ## Licence
 
 Utilisation commerciale interdite sans accord de l'auteur d'origine (Stawen Dronek).

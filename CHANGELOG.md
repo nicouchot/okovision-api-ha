@@ -1,5 +1,33 @@
 ## Unrealised
 
+## 2.5.0 — 2026-05-02 — Rapatriement master : kWh, coût pellet, import firmware V4
+
+Apport des fonctions applicatives développées sur le master entre v0.44.2 et v0.54.0, adaptées à l'architecture refactorée v2.x (7 classes Admin, ajax_routes, strict_types). L'API Home Assistant est explicitement hors scope et sera traitée en v2.6 / v3.0.
+
+### Calcul énergétique (Phases 1–3)
+
+- **Schéma BDD** : 6 nouvelles colonnes dans `oko_resume_day` (`conso_kwh`, `cumul_kg`, `cumul_kwh`, `cumul_cycle`, `prix_kg`, `prix_kwh`)
+- **Constantes** : `PCI_PELLET` (défaut 4,90 kWh/kg) et `RENDEMENT_CHAUDIERE` (défaut 89,50 %) dans `config_sample.php`, persistées dans `config.json`
+- **Setup** : champs PCI/rendement dans le wizard `setup.php`
+- **Migration** : `migrate_v2.php` — `ALTER TABLE` idempotent pour installs existantes
+- **Backend** : `okofen::insertSyntheseDay()` calcule kWh, cumulatifs et prix FIFO à chaque synthèse journalière
+- **AdminParam** : `saveInfoGenerale()` persiste PCI/rendement ; nouvelle méthode `recalcHistorique()` recalcule l'ensemble de l'historique (conso_kwh, cumulatifs, FIFO prix pellet)
+- **UI histo** : badges Énergie/Coût (mensuel + saison), série kWh orange sur axe Y dédié, colonnes Énergie (kWh) et Coût (€) dans le tableau récap
+- **UI adminParam** : champs PCI/rendement + bouton « Recalculer l'historique »
+
+### Import firmware V4 multi-niveaux + snapshot live (Phase 4)
+
+- **`okofen::storeLiveSnapshot()`** : appel `/all?`, parse JSON firmware V4, construction d'une ligne CSV (50 colonnes) → insertion dans `oko_historique_full` via `csv2bdd()`
+- **`cron.php`** : refonte en 3 branches selon `GET_CHAUDIERE_DATA_BY_IP` — V4 (log0 + snapshot live + retry log1 + fallback mail), V3 legacy, USB
+
+### Performance import + détection cycles (Phase 5)
+
+- **`csv2bdd()`** : refonte en batch `INSERT IGNORE` — une seule requête SQL par fichier ; `col_startCycle` forcé à NULL à l'import
+- **`recalcStartCycleForDay()`** : recalcule les fronts montants statut→4 depuis la BDD après chaque import, en initialisant `old_status` avec le dernier statut de la veille (élimine les faux démarrages minuit)
+- **`makeSyntheseByDay()`** : appelle `recalcStartCycleForDay()` avant `insertSyntheseDay()` pour garantir un `nb_cycle` fiable
+
+Hors scope (reporté en v2.6 / v3.0) : API Home Assistant (`ha_api.php`), historique silo/cendrier par jour, fallback `is_new` daily/today.
+
 ## 2.4.0 — 2026-05-01 — Release finale : corrections post refactoring
 
 Stabilisation complète de la v2.4.0 après éclatement d'`administration.class.php` (Phase 5). Cinq release candidates ont corrigé les régressions PHP 8.4 introduites par le refactoring et harmonisé le menu « Actions Manuelles ». Détail ci-dessous.
