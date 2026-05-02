@@ -74,6 +74,9 @@ return [
         'getDayWithoutSynthese' => static function (): void {
             (new AdminMatrix())->getDayWithoutSynthese();
         },
+        'recalcHistorique' => static function (): void {
+            (new AdminParam())->recalcHistorique();
+        },
         'checkUpdate' => static function (): void {
             (new AdminUpdate())->checkUpdate();
         },
