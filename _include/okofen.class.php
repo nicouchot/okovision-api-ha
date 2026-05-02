@@ -256,6 +256,117 @@ class okofen extends connectDb
         return false;
     }
 
+    /**
+     * Fetches current sensor values from the boiler /all? endpoint and writes
+     * a synthetic CSV row to CSVFILE so that csv2bdd() can import it.
+     * Called by cron.php to populate oko_historique_full for today in real time
+     * (the USB log file log0 is only written once at midnight by the boiler).
+     */
+    public function storeLiveSnapshot(): bool
+    {
+        $url         = 'http://'.CHAUDIERE.':'.PORT_JSON.'/'.PASSWORD_JSON.'/all?';
+        $maxAttempts = 3;
+        $retryDelay  = 3;
+        $data        = null;
+
+        for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+            $ch = curl_init($url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+            $body     = curl_exec($ch);
+            $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curlErr  = curl_error($ch);
+            curl_close($ch);
+
+            if ($httpCode === 200 && is_string($body) && $curlErr === '') {
+                $decoded = json_decode(utf8_encode($body), true);
+                if (is_array($decoded)) {
+                    $data = $decoded;
+                    break;
+                }
+                $this->log->info('Class '.__CLASS__.' | '.__FUNCTION__.' | Tentative '.$attempt.' — réponse non-JSON : '.substr($body, 0, 60));
+            } else {
+                $this->log->info('Class '.__CLASS__.' | '.__FUNCTION__.' | Tentative '.$attempt.' — HTTP '.$httpCode.' err='.$curlErr);
+            }
+            if ($attempt < $maxAttempts) {
+                sleep($retryDelay);
+            }
+        }
+
+        if ($data === null) {
+            $this->log->error('Class '.__CLASS__.' | '.__FUNCTION__.' | /all? non disponible');
+            return false;
+        }
+
+        $gv = function (array $section, string $key): float {
+            return isset($section[$key]['val']) ? (float) $section[$key]['val'] : 0.0;
+        };
+        $fmt = function (float $v, int $decimals = 1): string {
+            return number_format($v, $decimals, CSV_DECIMAL, '');
+        };
+        $int = function (float $v): int { return (int) round($v); };
+
+        $sys = $data['system'] ?? [];
+        $hk1 = $data['hk1']    ?? [];
+        $pe1 = $data['pe1']    ?? [];
+
+        $now   = new \DateTime();
+        $datum = $now->format('d.m.Y');
+        $zeit  = $now->format('H:i:00');
+
+        $at = $fmt($gv($sys, 'L_ambient') * 0.1);
+
+        $cols = [
+            $datum,                                          // 0  Datum
+            $zeit,                                           // 1  Zeit
+            $at,                                             // 2  AT [°C]
+            $at,                                             // 3  ATakt [°C]
+            $int($gv($pe1, 'L_br')),                        // 4  PE1_BR1
+            $fmt($gv($hk1, 'L_flowtemp_act') * 0.1),       // 5  HK1 VL Ist
+            $fmt($gv($hk1, 'L_flowtemp_set') * 0.1),       // 6  HK1 VL Soll
+            $fmt($gv($hk1, 'L_roomtemp_act') * 0.1),       // 7  HK1 RT Ist
+            $fmt($gv($hk1, 'L_roomtemp_set') * 0.1),       // 8  HK1 RT Soll
+            $int($gv($hk1, 'L_pump')),                      // 9  HK1 Pumpe
+            0,                                               // 10 HK1 Mischer
+            $fmt(0.0),                                       // 11 HK1 Fernb
+            $int($gv($hk1, 'L_state')),                     // 12 HK1 Status
+            $fmt($gv($pe1, 'L_temp_act') * 0.1),           // 13 PE1 KT
+            $fmt($gv($pe1, 'L_temp_set') * 0.1),           // 14 PE1 KT_SOLL
+            $fmt($gv($pe1, 'L_uw_release') * 0.1),         // 15 PE1 UW Freigabe
+            $int($gv($pe1, 'L_modulation')),                // 16 PE1 Modulation
+            $fmt($gv($pe1, 'L_frt_temp_act') * 0.1),       // 17 PE1 FRT Ist
+            $fmt($gv($pe1, 'L_frt_temp_set') * 0.1),       // 18 PE1 FRT Soll
+            $fmt($gv($pe1, 'L_frt_temp_end') * 0.1),       // 19 PE1 FRT End
+            $fmt($gv($pe1, 'L_runtimeburner') * 0.01, 2),  // 20 PE1 Einschublaufzeit
+            $fmt($gv($pe1, 'L_resttimeburner') * 0.01, 2), // 21 PE1 Pausenzeit
+            $int($gv($pe1, 'L_currentairflow')),            // 22 PE1 Luefterdrehzahl
+            $int($gv($pe1, 'L_fluegas')),                   // 23 PE1 Saugzugdrehzahl
+            $fmt($gv($pe1, 'L_lowpressure') * 0.1),        // 24 PE1 Unterdruck Ist
+            $fmt($gv($pe1, 'L_lowpressure_set') * 0.1),    // 25 PE1 Unterdruck Soll
+            $int($gv($pe1, 'L_storage_fill')),              // 26 PE1 Fuellstand
+            $int($gv($pe1, 'L_storage_popper')),            // 27 PE1 Fuellstand ZWB
+            $int($gv($pe1, 'L_state')),                     // 28 PE1 Status
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,               // 29-39 Motor states
+            $fmt(0.0),                                       // 40 PE1 Res1 Temp.
+            0, 0,                                            // 41-42 PE1 CAP
+            $int($gv($pe1, 'L_ak')),                        // 43 PE1 AK
+            0,                                               // 44 PE1 Saug-Int
+            1, 0,                                            // 45-46 DigIn
+            0, 0, 0,                                         // 47-49 Fehler
+        ];
+
+        $header  = 'Datum ;Zeit ;AT [°C];ATakt [°C];PE1_BR1 ;HK1 VL Ist[°C];HK1 VL Soll[°C];HK1 RT Ist[°C];HK1 RT Soll[°C];HK1 Pumpe;HK1 Mischer;HK1 Fernb[°C];HK1 Status;PE1 KT[°C];PE1 KT_SOLL[°C];PE1 UW Freigabe[°C];PE1 Modulation[%];PE1 FRT Ist[°C];PE1 FRT Soll[°C];PE1 FRT End[°C];PE1 Einschublaufzeit[zs];PE1 Pausenzeit[zs];PE1 Luefterdrehzahl[%];PE1 Saugzugdrehzahl[%];PE1 Unterdruck Ist[EH];PE1 Unterdruck Soll[EH];PE1 Fuellstand[kg];PE1 Fuellstand ZWB[kg];PE1 Status;PE1 Motor ES;PE1 Motor RA;PE1 Motor RES1;PE1 Motor TURBINE;PE1 Motor ZUEND;PE1 Motor UW[%];PE1 Motor AV;PE1 Motor RES2;PE1 Motor MA;PE1 Motor RM;PE1 Motor SM;PE1 Res1 Temp.[°C];PE1 CAP RA;PE1 CAP ZB;PE1 AK;PE1 Saug-Int[min];PE1 DigIn1;PE1 DigIn2;Fehler1 ;Fehler2 ;Fehler3 ;';
+        $dataRow = implode(';', $cols).';';
+
+        if (file_put_contents(CSVFILE, $header."\n".$dataRow."\n") === false) {
+            $this->log->error('Class '.__CLASS__.' | '.__FUNCTION__.' | Écriture CSVFILE impossible');
+            return false;
+        }
+
+        $this->log->info('Class '.__CLASS__.' | '.__FUNCTION__.' | Snapshot live écrit ('.$datum.' '.$zeit.')');
+        return true;
+    }
+
     private function cvtDec(string $n): string
     {
         return str_replace(CSV_DECIMAL, BDD_DECIMAL, $n);
