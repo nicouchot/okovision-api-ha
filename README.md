@@ -64,6 +64,30 @@ Rapatriement des apports V4 du fork [skydarc/okovision_v2](https://github.com/sk
 - Performance : `csv2bdd()` en batch `INSERT IGNORE`
 - Migration idempotente (`migrate_v2.php`) pour installs existantes
 
+## Mise à jour vers v2.5.0 (installs existantes)
+
+La v2.5.0 introduit le calcul énergétique (kWh) et le coût pellet (FIFO). Deux étapes manuelles sont **obligatoires** sur toute install antérieure, sinon la page **histo** reste vide et le bouton « Recalculer l'historique » d'**adminParam** renvoie « Erreur lors du recalcul » :
+
+1. **Compléter `config.php`** avec les deux constantes ajoutées en v2.5.0 (cf. `config_sample.php`), juste après le bloc silo / cendrier :
+
+   ```php
+   // Calcul énergétique pellet
+   DEFINE('PCI_PELLET',          !empty($config['pci_pellet']) ? (float)$config['pci_pellet'] : 4.90); // kWh/kg //json
+   DEFINE('RENDEMENT_CHAUDIERE', !empty($config['rendement'])  ? (float)$config['rendement']  : 89.50); // %       //json
+   ```
+
+   Sans ces `DEFINE`, PHP 8.x lève une `Error: Undefined constant` qui interrompt le rendu de `adminParam.php` au champ « PCI pellet » (les champs Rendement / Silo / Langue / bouton Recalcul disparaissent).
+
+2. **Lancer `migrate_v2.php` une seule fois** depuis le navigateur (`https://<host>/migrate_v2.php`) ou en CLI. Le script est **idempotent** :
+   - `ALTER TABLE oko_resume_day` ajoute les 6 colonnes manquantes (`conso_kwh`, `cumul_kg`, `cumul_kwh`, `cumul_cycle`, `prix_kg`, `prix_kwh`) — colonnes déjà présentes ignorées (errno 1060).
+   - Recalcule `conso_kwh` pour les lignes existantes à partir du PCI / rendement courants.
+   - Recalcule les cumulatifs (kg / kWh / cycles) sur tout l'historique.
+   - Affecte le prix au kg en FIFO d'après les livraisons `oko_silo_events` (event_type = `PELLET`).
+
+   Tant que `migrate_v2.php` n'est pas passé, `getHistoByMonth` (`SELECT conso_kwh ...`) échoue et `recalcHistorique()` lève une `mysqli_sql_exception`.
+
+Le bouton « Recalculer l'historique » dans **adminParam** sert ensuite à rejouer ces calculs dérivés à la demande, notamment **après modification du PCI ou du rendement**.
+
 ## Licence
 
 Utilisation commerciale interdite sans accord de l'auteur d'origine (Stawen Dronek).

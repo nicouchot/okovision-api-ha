@@ -1,5 +1,7 @@
 ## Unrealised
 
+- **Doc** : section « Mise à jour vers v2.5.0 » ajoutée au README. Précise que `migrate_v2.php` doit être lancé une fois sur chaque install existante (sinon `oko_resume_day` n'a pas les colonnes `conso_kwh`, `cumul_*`, `prix_*` → page histo vide et bouton « Recalculer l'historique » qui renvoie « Erreur lors du recalcul »). Précise aussi que `config.php` doit recevoir les deux `DEFINE` `PCI_PELLET` / `RENDEMENT_CHAUDIERE` (cf. `config_sample.php`) — sans quoi `adminParam.php` s'arrête à mi-page (constante indéfinie en PHP 8.x).
+
 ## 2.5.0 — 2026-05-02 — Rapatriement master : kWh, coût pellet, import firmware V4
 
 Apport des fonctions applicatives développées sur le master entre v0.44.2 et v0.54.0, adaptées à l'architecture refactorée v2.x (7 classes Admin, ajax_routes, strict_types). L'API Home Assistant est explicitement hors scope et sera traitée en v2.6 / v3.0.
